@@ -1,3 +1,97 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+/node_modules
+jspm_packages/
+web_modules/
+/.pnp
+.pnp.*
+
+# Yarn / pnpm cache
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.yarn-integrity
+
+# npm/yarn/pnpm caches
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache
+.cache
+.nyc_output
+
+# Coverage
+coverage
+*.lcov
+/coverage
+
+# Env files
+.env
+.env.*
+!.env.example
+.env*
+.vercel
+
+# Build outputs
+.next
+/.next/
+out
+/out/
+/build
+dist
+.nuxt
+.vuepress/dist
+.svelte-kit/
+**/.vitepress/dist
+**/.vitepress/cache
+.docusaurus
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.DS_Store
+*.pem
+.node_repl_history
+.tern-port
+.vscode-test
+.serverless/
+.fusebox/
+.dynamodb/
+.firebase/
+
+# Vite logs
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Debug logs
+.pnpm-debug.log*
+
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -126,14 +220,55 @@ dist
 .vscode-test
 
 # yarn v3
+=======
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+>>>>>>> d248b67 (Initial commit from Create Next App)
 .pnp.*
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
+<<<<<<< HEAD
 !.yarn/sdks
 !.yarn/versions
 
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+=======
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+>>>>>>> d248b67 (Initial commit from Create Next App)
