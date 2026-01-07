@@ -7,7 +7,7 @@ export default function ElysianMenu({ items, addToCart }) {
         <div key={item.id} className="border rounded-lg p-4 shadow-md bg-white text-gray-900">
           <h3 className="text-xl font-bold">{item.name}</h3>
           <p className="text-gray-600">₹{item.price}</p>
-          <button 
+          <button
             onClick={() => addToCart(item)}
             className="mt-3 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
           >
