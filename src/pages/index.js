@@ -1,5 +1,5 @@
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
 import { collection, onSnapshot, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
@@ -12,12 +12,43 @@ export default function Home() {
   const CATEGORY_ORDER = ["Combos", "Burgers", "Pizzas", "Pancakes", "Dips"];
   const [openCategory, setOpenCategory] = useState("Combos");
 
-  // 1. Fetch Menu from Firebase (Real-time)
+  // 1. Fetch Menu from Firebase (Real-time) with simple local cache
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "menu"), 
+    // Try to hydrate from localStorage first for faster perceived load
+    if (typeof window !== "undefined") {
+      try {
+        const cached = window.localStorage.getItem("elysian_menu_cache_v1");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Basic TTL check (5 minutes)
+          if (parsed.timestamp && Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+            setMenu(parsed.menu || []);
+            setLoading(false);
+          }
+        }
+      } catch (e) {
+        console.warn("Menu cache read failed", e);
+      }
+    }
+
+    const unsubscribe = onSnapshot(
+      collection(db, "menu"),
       (snapshot) => {
-        setMenu(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        const freshMenu = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setMenu(freshMenu);
         setLoading(false);
+
+        // Update cache
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(
+              "elysian_menu_cache_v1",
+              JSON.stringify({ menu: freshMenu, timestamp: Date.now() })
+            );
+          } catch (e) {
+            console.warn("Menu cache write failed", e);
+          }
+        }
       },
       (err) => {
         console.error("Snapshot error:", err);
@@ -27,6 +58,31 @@ export default function Home() {
     );
     return () => unsubscribe();
   }, []);
+
+  // Memoize items grouped and sorted by category so we don't recompute on every render
+  const menuByCategory = useMemo(() => {
+    const availableItems = menu.filter((m) => m.available !== false);
+    const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
+      acc[cat] = [];
+      return acc;
+    }, {});
+
+    for (const item of availableItems) {
+      const cat = item.category || "Dips";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    }
+
+    CATEGORY_ORDER.forEach((cat) => {
+      if (grouped[cat]) {
+        grouped[cat] = grouped[cat]
+          .slice()
+          .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      }
+    });
+
+    return grouped;
+  }, [menu]);
 
   // 2. Cart Logic
   const addToCart = (item) => {
@@ -113,10 +169,7 @@ export default function Home() {
           ) : (
             <div className="space-y-4">
               {CATEGORY_ORDER.map((cat) => {
-                const items = menu
-                  .filter(m => m.available !== false && m.category === cat)
-                  .slice()
-                  .sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+                const items = menuByCategory[cat] || [];
                 const isOpen = openCategory === cat;
                 return (
                   <div key={cat} className="border border-pink-200 rounded-2xl bg-white">
@@ -140,7 +193,8 @@ export default function Home() {
                                 <img 
                                   src={item.imageUrl.trim()} 
                                   alt={item.name} 
-                                  className="w-14 h-14 rounded object-cover border" 
+                                  className="w-14 h-14 rounded object-cover border"
+                                  loading="lazy"
                                 />
                               )}
                               <div>
