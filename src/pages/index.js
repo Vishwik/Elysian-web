@@ -2,7 +2,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
-import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId } from 'firebase/firestore';
+import { X, Clock, CheckCircle } from 'lucide-react';
 
 export default function Home() {
   const [menu, setMenu] = useState([]);
@@ -13,6 +14,9 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const CATEGORY_ORDER = ["Combos", "Burgers", "Pizzas", "Pancakes", "Dips"];
   const [openCategory, setOpenCategory] = useState("Combos");
+  const [myOrderIds, setMyOrderIds] = useState([]);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [trackedOrders, setTrackedOrders] = useState([]);
 
   // Auto-expand all categories with search results when searching
   const [expandedCategories, setExpandedCategories] = useState(new Set(["Combos"]));
@@ -31,6 +35,39 @@ export default function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  // Load My Orders from LocalStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("elysian_my_orders");
+      if (saved) {
+        setMyOrderIds(JSON.parse(saved));
+      }
+    }
+  }, []);
+
+  // Listen to My Orders updates
+  useEffect(() => {
+    if (myOrderIds.length === 0) return;
+
+    // Firestore limitation: 'in' queries support max 10 values.
+    // We'll take the last 10 orders.
+    const recentIds = myOrderIds.slice(-10);
+
+    const q = query(
+      collection(db, "orders"),
+      where(documentId(), "in", recentIds)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      // Sort by timestamp desc manually since we can't easily order by timestamp with 'in' query on ID
+      orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+      setTrackedOrders(orders);
+    });
+
+    return () => unsubscribe();
+  }, [myOrderIds]);
 
   // 1. Fetch Menu from Firebase (Real-time) with simple local cache
   useEffect(() => {
@@ -196,13 +233,19 @@ export default function Home() {
     }
 
     try {
-      await addDoc(collection(db, "orders"), {
+      const docRef = await addDoc(collection(db, "orders"), {
         items: cart,
         totalPrice: cart.reduce((s, i) => s + i.price, 0),
         status: "pending", // Matches your logic
         timestamp: serverTimestamp(),
       });
-      alert("🍓 Order Placed!");
+
+      // Save to local tracked orders
+      const newOrderIds = [...myOrderIds, docRef.id];
+      setMyOrderIds(newOrderIds);
+      localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
+
+      alert("🍓 Order Placed! You can track it in 'My Orders'.");
       setCart([]);
     } catch (e) {
       console.error("Firebase Error:", e);
@@ -229,6 +272,12 @@ export default function Home() {
           ELYSIAN
         </h1>
         <p className="text-xs uppercase tracking-[0.3em] text-rose-300 mt-2 font-inter md:animate-pulse">Premium Food Service</p>
+        <button
+          onClick={() => setShowOrderHistory(true)}
+          className="absolute right-6 top-6 text-sm font-bold text-rose-300 border border-rose-300/30 px-3 py-1 rounded-full hover:bg-rose-900/50 transition-colors"
+        >
+          My Orders {trackedOrders.filter(o => o.status === 'pending').length > 0 && <span className="ml-1 text-xs bg-rose-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">{trackedOrders.filter(o => o.status === 'pending').length}</span>}
+        </button>
       </header>
 
       <main className="max-w-6xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
@@ -527,6 +576,72 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* Order History Modal */}
+        {showOrderHistory && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-rose-50/50">
+                <h3 className="font-cinzel font-bold text-2xl text-gray-900">My Orders</h3>
+                <button
+                  onClick={() => setShowOrderHistory(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                {trackedOrders.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    <p className="text-4xl mb-2">🥥</p>
+                    <p>No recent orders found.</p>
+                  </div>
+                ) : (
+                  trackedOrders.map(order => (
+                    <div key={order.id} className="border border-gray-100 rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] bg-white">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            {order.timestamp?.seconds ? new Date(order.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                          </p>
+                          <p className="font-bold text-gray-800 text-lg">
+                            ₹{order.totalPrice}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${order.status === 'served' ? 'bg-green-100 text-green-700' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700 animate-pulse'
+                          }`}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 mb-3">
+                        {order.items.slice(0, 3).map((item, i) => (
+                          <p key={i} className="text-sm text-gray-600 truncate">
+                            {item.quantity ? `${item.quantity}x ` : ''}{item.name}
+                          </p>
+                        ))}
+                        {order.items.length > 3 && (
+                          <p className="text-xs text-rose-500 font-medium italic">
+                            + {order.items.length - 3} more items...
+                          </p>
+                        )}
+                      </div>
+
+                      {order.status === 'pending' && (
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                          <div className="bg-rose-500 h-1.5 rounded-full w-2/3 animate-[shimmer_1.5s_infinite_linear] bg-[length:400%_100%] bg-gradient-to-r from-rose-500 via-rose-300 to-rose-500"></div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
     </div>
