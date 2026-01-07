@@ -1,3 +1,4 @@
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../app/globals.css';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
