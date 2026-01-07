@@ -267,16 +267,42 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-gray-900 pb-24 font-inter selection:bg-rose-200">
       {/* HEADER */}
-      <header className="bg-[#1a1a1a] text-[#f8f5f2] p-6 text-center shadow-2xl sticky top-0 z-50 backdrop-blur-md bg-opacity-90 md:transition-all md:duration-300 border-b border-white/10">
-        <h1 className="text-4xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
-          ELYSIAN
-        </h1>
-        <p className="text-xs uppercase tracking-[0.3em] text-rose-300 mt-2 font-inter md:animate-pulse">Premium Food Service</p>
+      <header className="bg-[#1a1a1a] text-[#f8f5f2] py-4 px-6 md:p-6 text-center shadow-2xl sticky top-0 z-50 backdrop-blur-md bg-opacity-90 md:transition-all md:duration-300 border-b border-white/10 flex justify-between md:justify-center items-center relative">
+        {/* Placeholder to balance center alignment on desktop if needed, or just absolute centering */}
+
+        {/* Center Content: Title */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <h1 className="text-3xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
+            ELYSIAN
+          </h1>
+          <p className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-1 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
+        </div>
+
+        {/* My Orders Button - Absolute on Desktop, Relative/Flex on Mobile if needed, but Absolute is cleaner for centered title */}
         <button
           onClick={() => setShowOrderHistory(true)}
-          className="absolute right-6 top-6 text-sm font-bold text-rose-300 border border-rose-300/30 px-3 py-1 rounded-full hover:bg-rose-900/50 transition-colors"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 md:right-8 md:top-1/2 md:-translate-y-1/2 text-rose-300 hover:text-white transition-all active:scale-95"
+          aria-label="My Orders"
         >
-          My Orders {trackedOrders.filter(o => o.status === 'pending').length > 0 && <span className="ml-1 text-xs bg-rose-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">{trackedOrders.filter(o => o.status === 'pending').length}</span>}
+          {/* Desktop Version */}
+          <div className="hidden md:flex items-center gap-2 border border-rose-300/30 px-4 py-2 rounded-full hover:bg-rose-900/40 transition-all ml-4">
+            <span className="text-sm font-bold font-inter">My Orders</span>
+            {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
+              <span className="bg-rose-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse shadow-glow">
+                {trackedOrders.filter(o => o.status === 'pending').length}
+              </span>
+            )}
+          </div>
+
+          {/* Mobile Version: Icon Only */}
+          <div className="md:hidden relative p-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
+            <Clock className="w-5 h-5" />
+            {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse border border-[#1a1a1a]">
+                {trackedOrders.filter(o => o.status === 'pending').length}
+              </span>
+            )}
+          </div>
         </button>
       </header>
 
@@ -610,8 +636,8 @@ export default function Home() {
                           </p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${order.status === 'served' ? 'bg-green-100 text-green-700' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700 animate-pulse'
+                          order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700 animate-pulse'
                           }`}>
                           {order.status}
                         </span>
