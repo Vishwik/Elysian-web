@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
