@@ -2,13 +2,14 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
-import { collection, onSnapshot, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 
 export default function Home() {
   const [menu, setMenu] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [acceptingOrders, setAcceptingOrders] = useState(true);
   const CATEGORY_ORDER = ["Combos", "Burgers", "Pizzas", "Pancakes", "Dips"];
   const [openCategory, setOpenCategory] = useState("Combos");
 
@@ -59,6 +60,26 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
+  // Check if orders are being accepted (real-time listener for UI updates)
+  useEffect(() => {
+    const configRef = doc(db, "system", "config");
+    const unsubscribe = onSnapshot(configRef, (snap) => {
+      if (snap.exists()) {
+        const accepting = snap.data().acceptingOrders;
+        // Explicitly check: if field exists and is false, then false; otherwise true
+        setAcceptingOrders(accepting !== false && accepting !== undefined);
+      } else {
+        // Default to accepting orders if config doesn't exist
+        setAcceptingOrders(true);
+      }
+    }, (error) => {
+      console.error("Error listening to order acceptance:", error);
+      // On error, default to accepting orders
+      setAcceptingOrders(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Memoize items grouped and sorted by category so we don't recompute on every render
   const menuByCategory = useMemo(() => {
     const availableItems = menu.filter((m) => m.available !== false);
@@ -99,49 +120,39 @@ export default function Home() {
 
   // 3. Place Order Logic
   const placeOrder = async () => {
-    if (cart.length === 0) return alert("Your cart is empty!");
+    if (cart.length === 0) return alert("Tray is empty!");
+    
+    // Double-check: Read config directly from Firestore before placing order
+    try {
+      const configRef = doc(db, "system", "config");
+      const configSnap = await getDoc(configRef);
+      const isAcceptingOrders = configSnap.exists() 
+        ? configSnap.data().acceptingOrders !== false 
+        : true; // Default to true if config doesn't exist
+      
+      if (!isAcceptingOrders) {
+        alert("Sorry, we are not taking any orders at this moment.");
+        return;
+      }
+    } catch (e) {
+      console.error("Error checking order acceptance:", e);
+      // If we can't check, block the order for safety
+      alert("Unable to verify order status. Please try again.");
+      return;
+    }
     
     try {
-      let orderNumber;
-      try {
-        const countersRef = doc(db, "system", "counters");
-        orderNumber = await runTransaction(db, async (transaction) => {
-          const snap = await transaction.get(countersRef);
-          const current = snap.exists() ? Number(snap.data().orderNumber ?? 0) : 0;
-          const next = current + 1;
-          transaction.set(countersRef, { orderNumber: next }, { merge: true });
-          return next;
-        });
-      } catch (err) {
-        console.warn("Order number transaction failed:", err?.message);
-        orderNumber = undefined;
-      }
-      const itemsForOrder = cart.map((item) => ({
-        id: item.id || "",
-        name: item.name || "",
-        price: Number(item.price ?? 0),
-        category: item.category || "Dips",
-        vegType: item.vegType || "Veg"
-      }));
-      const payload = {
-        items: itemsForOrder,
-        totalPrice: totalPrice,
-        status: "pending",
+      await addDoc(collection(db, "orders"), {
+        items: cart,
+        totalPrice: cart.reduce((s, i) => s + i.price, 0),
+        status: "pending", // Matches your logic
         timestamp: serverTimestamp(),
-      };
-      if (typeof orderNumber === "number") {
-        payload.orderNumber = orderNumber;
-      }
-      await addDoc(collection(db, "orders"), payload);
-      alert(
-        typeof orderNumber === "number"
-          ? `🍓 Order Placed! Your number: #${orderNumber}. Please proceed to the counter.`
-          : "🍓 Order Placed! Please proceed to the counter."
-      );
+      });
+      alert("🍓 Order Placed!");
       setCart([]);
     } catch (e) {
-      console.error("Order Error: ", e);
-      alert("Something went wrong. Try again!");
+      console.error("Firebase Error:", e);
+      alert("Permission Denied or Connection Error. Check console.");
     }
   };
 
@@ -247,11 +258,20 @@ export default function Home() {
               <span>Total:</span>
               <span className="text-pink-600">₹{totalPrice}</span>
             </div>
+            {!acceptingOrders && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm font-semibold text-center">
+                  Sorry, we are not taking any orders at this moment.
+                </p>
+              </div>
+            )}
             <button 
               onClick={placeOrder}
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || !acceptingOrders}
               className={`w-full py-4 rounded-2xl font-bold text-lg transition shadow-lg ${
-                cart.length === 0 ? 'bg-gray-300 text-gray-500' : 'bg-pink-500 text-white hover:bg-pink-600'
+                cart.length === 0 || !acceptingOrders 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-pink-500 text-white hover:bg-pink-600'
               }`}
             >
               Confirm Order

@@ -1,9 +1,26 @@
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebaseConfig';
+import { db, auth } from '../lib/firebaseConfig';
 import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/router';
 
 export default function OrdersPage() {
+  const [user, setUser] = useState(null);
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
+
+  // Authentication check
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        // If not logged in, send them to the login page
+        router.push('/login');
+      } else {
+        setUser(currentUser);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   // 1. Listen for Live Orders
   useEffect(() => {
@@ -46,6 +63,9 @@ export default function OrdersPage() {
   // Calculate total orders served
   const totalOrdersServed = orders.filter(order => order.status === 'served').length;
   const totalPendingOrders = orders.filter(order => order.status === 'pending').length;
+
+  // If the user state is empty, show nothing (prevents "flashing" orders content)
+  if (!user) return <div className="p-20 text-center">Checking authorization...</div>;
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 text-gray-900">
