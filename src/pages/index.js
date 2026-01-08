@@ -413,12 +413,17 @@ export default function Home() {
         <div className="flex items-center gap-2 md:gap-3 md:absolute md:right-8 md:top-1/2 md:transform md:-translate-y-1/2">
           {/* Auth Button */}
           {!user ? (
-            <button
-              onClick={handleGoogleLogin}
-              className="bg-white/10 hover:bg-white/20 text-rose-300 hover:text-white px-3 py-1.5 rounded-full text-xs md:text-sm font-cinzel transition-all border border-rose-300/30 backdrop-blur-sm"
-            >
-              Sign In
-            </button>
+            <div className="flex flex-col items-center">
+              <button
+                onClick={handleGoogleLogin}
+                className="bg-white/10 hover:bg-white/20 text-rose-300 hover:text-white px-3 py-1.5 rounded-full text-xs md:text-sm font-cinzel transition-all border border-rose-300/30 backdrop-blur-sm"
+              >
+                Sign In
+              </button>
+              <span className="text-[8px] md:text-[10px] text-rose-200 mt-1 whitespace-nowrap opacity-80 font-inter">
+                Sign in to save your recent orders
+              </span>
+            </div>
           ) : (
             <div className="flex items-center gap-2 mr-2">
               <img
@@ -664,7 +669,7 @@ export default function Home() {
 
           {/* FLOATING MOBILE CART BAR */}
           {cart.length > 0 && (
-            <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-4 z-[60] flex items-center justify-between pb-8">
+            <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-4 z-[100] flex items-center justify-between pb-8">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{cart.length} ITEMS</span>
                 <span className="text-xl font-bold text-gray-900 font-inter">₹{totalPrice}</span>
