@@ -399,18 +399,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-gray-900 pb-24 font-inter selection:bg-rose-200">
       {/* ... existing header ... */}
-      <header className="bg-[#1a1a1a] text-[#f8f5f2] py-4 px-6 md:p-6 text-center shadow-2xl sticky top-0 z-50 backdrop-blur-md bg-opacity-90 md:transition-all md:duration-300 border-b border-white/10 flex justify-between md:justify-center items-center relative">
+      <header className="bg-[#1a1a1a] text-[#f8f5f2] py-4 px-4 md:p-6 shadow-2xl sticky top-0 z-50 backdrop-blur-md bg-opacity-90 md:transition-all md:duration-300 border-b border-white/10 flex justify-between items-center">
         {/* ... existing header content ... */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-3xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
+        <div className="flex flex-col items-start md:items-center justify-center">
+          <h1 className="text-2xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
             Ivory Café
           </h1>
-          <p className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-1 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
+          <p className="text-[0.5rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-0.5 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
           {userName && (
-            <p className="text-rose-100/80 font-cinzel text-sm mt-2 animate-fadeIn">Welcome, {userName}</p>
+            <p className="text-rose-100/80 font-cinzel text-sm mt-2 animate-fadeIn hidden md:block">Welcome, {userName}</p>
           )}
         </div>
-        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 md:right-8 flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 md:absolute md:right-8 md:top-1/2 md:transform md:-translate-y-1/2">
           {/* Auth Button */}
           {!user ? (
             <button
