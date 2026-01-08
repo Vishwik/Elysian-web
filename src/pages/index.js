@@ -6,7 +6,7 @@ import { db, auth } from '../lib/firebaseConfig';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId, setDoc } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
-import { ShoppingCart, Clock, X, Info } from 'lucide-react';
+import { ShoppingCart, Clock, X, Info, LogOut } from 'lucide-react';
 
 export default function Home() {
   const [menu, setMenu] = useState([]);
@@ -424,13 +424,15 @@ export default function Home() {
               <img
                 src={user.photoURL}
                 alt="User"
-                className="w-8 h-8 rounded-full border border-rose-300/50 hidden md:block"
+                className="w-8 h-8 rounded-full border border-rose-300/50 block"
               />
               <button
                 onClick={handleLogout}
-                className="text-rose-300/70 hover:text-rose-300 text-xs md:text-sm font-inter transition-colors hidden md:block"
+                className="text-rose-300/70 hover:text-rose-300 text-xs md:text-sm font-inter transition-colors flex items-center md:block"
+                aria-label="Logout"
               >
-                Logout
+                <span className="hidden md:inline">Logout</span>
+                <LogOut className="w-5 h-5 md:hidden" />
               </button>
             </div>
           )}
@@ -659,10 +661,39 @@ export default function Home() {
               })}
             </div>
           )}
+
+          {/* FLOATING MOBILE CART BAR */}
+          {cart.length > 0 && (
+            <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] p-4 z-[60] flex items-center justify-between pb-8">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">{cart.length} ITEMS</span>
+                <span className="text-xl font-bold text-gray-900 font-inter">₹{totalPrice}</span>
+              </div>
+              {!acceptingOrders ? (
+                <span className="text-red-600 font-bold text-sm bg-red-50 px-3 py-2 rounded-lg border border-red-100">
+                  Not Accepting Orders
+                </span>
+              ) : (
+                <button
+                  onClick={() => {
+                    const cartSection = document.getElementById('cart-section');
+                    if (cartSection) {
+                      cartSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-800 active:scale-95 transition-all shadow-lg shadow-gray-200"
+                >
+                  View Tray
+                  <ShoppingCart className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* CART SIDEBAR / FLOATING BUTTON */}
-        <div className="w-full md:w-96 glass-panel p-8 rounded-[2.5rem] shadow-[0_20px_60px_rgb(0,0,0,0.06)] h-fit sticky top-24 transform md:transition-all md:duration-300 hover:shadow-[0_30px_80px_rgb(0,0,0,0.1)] md:animate-slideIn border-0">
+        <div id="cart-section" className="w-full md:w-96 glass-panel p-8 rounded-[2.5rem] shadow-[0_20px_60px_rgb(0,0,0,0.06)] h-fit sticky top-24 transform md:transition-all md:duration-300 hover:shadow-[0_30px_80px_rgb(0,0,0,0.1)] md:animate-slideIn border-0">
           <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-pink-200">
             <h2 className="text-3xl font-cinzel font-bold text-gray-900">
               Your Tray

@@ -303,11 +303,11 @@ export default function AdminPage() {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen font-sans text-gray-900">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
         <h1 className="text-4xl font-bold">Admin Dashboard</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           {/* Accept Orders Toggle */}
-          <div className="flex items-center gap-6 bg-white px-4 py-2 rounded-lg shadow border">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 bg-white px-4 py-3 rounded-lg shadow border w-full md:w-auto justify-center">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-gray-700">Accept Orders:</span>
               <button
@@ -325,24 +325,24 @@ export default function AdminPage() {
               </span>
             </div>
 
-            <div className="h-6 w-px bg-gray-200"></div>
+            <div className="h-px w-full sm:h-6 sm:w-px bg-gray-200"></div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-semibold text-gray-700">UPI ID:</label>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+              <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">UPI ID:</label>
               <input
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="Enter UPI ID"
-                className="border p-1 px-2 rounded text-sm w-40"
+                className="border p-1 px-2 rounded text-sm w-full sm:w-40"
               />
               <button onClick={updateUpiId} className="bg-gray-900 text-white px-3 py-1 rounded text-xs font-bold hover:bg-gray-700">Save</button>
             </div>
           </div>
-          <div className="space-x-2">
-            <a href="/orders" className="bg-purple-600 text-white px-4 py-2 rounded font-bold hover:bg-purple-700 transition">View Orders</a>
-            <a href="/stats" className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition">View Stats</a>
-            <button onClick={seedItems} className="bg-green-600 text-white px-4 py-2 rounded font-bold">Seed Default Menu</button>
-            <button onClick={deleteAll} className="bg-red-600 text-white px-4 py-2 rounded font-bold">Delete All</button>
+          <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 w-full md:w-auto">
+            <a href="/orders" className="bg-purple-600 text-white px-4 py-2 rounded font-bold hover:bg-purple-700 transition text-center text-sm md:text-base">View Orders</a>
+            <a href="/stats" className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition text-center text-sm md:text-base">View Stats</a>
+            <button onClick={seedItems} className="bg-green-600 text-white px-4 py-2 rounded font-bold text-sm md:text-base">Seed Menu</button>
+            <button onClick={deleteAll} className="bg-red-600 text-white px-4 py-2 rounded font-bold text-sm md:text-base">Delete All</button>
           </div>
         </div>
       </div>
