@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
 import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId } from 'firebase/firestore';
-import { X, Clock, CheckCircle } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { ShoppingCart, Clock, X, Info } from 'lucide-react';
 
 export default function Home() {
   const [menu, setMenu] = useState([]);
@@ -21,6 +22,7 @@ export default function Home() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [selectedPaymentMode, setSelectedPaymentMode] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
   const [userName, setUserName] = useState("");
 
   // Auto-expand all categories with search results when searching
@@ -256,10 +258,14 @@ export default function Home() {
         const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
         const businessName = "Ivory Café";
         const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
-        alert(`Redirecting to payment for ₹${total}... Please complete payment and return to this page.`);
-        if (typeof window !== "undefined") {
-          window.location.href = upiUrl;
-        }
+
+        setPaymentData({
+          url: upiUrl,
+          amount: total,
+          id: docRef.id,
+          vpa: myUpiId
+        });
+        // Removed automatic redirect to prevent "Transaction failed" from deep links
       } else {
         alert("Order placed. Please pay cash at the counter.");
       }
@@ -803,6 +809,70 @@ export default function Home() {
                 >
                   Confirm Order
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PAYMENT QR MODAL */}
+        {paymentData && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-scaleIn relative border border-white/20">
+              <div className="bg-rose-50/80 p-6 border-b border-rose-100 flex justify-between items-center">
+                <h3 className="font-cinzel font-bold text-2xl text-gray-900">Scan to Pay</h3>
+                <button
+                  onClick={() => setPaymentData(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-8 flex flex-col items-center">
+                <div className="bg-white p-4 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.1)] border-4 border-rose-100 mb-6">
+                  <QRCodeCanvas
+                    value={paymentData.url}
+                    size={220}
+                    bgColor={"#ffffff"}
+                    fgColor={"#000000"}
+                    level={"H"}
+                    includeMargin={false}
+                  />
+                </div>
+
+                <div className="text-center w-full space-y-4">
+                  <div>
+                    <p className="text-gray-500 text-sm uppercase tracking-wider font-bold mb-1">Total Amount</p>
+                    <p className="text-4xl font-bold text-gray-900 font-inter">₹{paymentData.amount}</p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-bold mb-2">Or Pay to UPI ID</p>
+                    <div className="flex items-center justify-center gap-2 bg-white p-2 rounded-lg border border-gray-200">
+                      <code className="text-gray-800 font-mono font-bold text-lg select-all">{paymentData.vpa}</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(paymentData.vpa);
+                          alert("UPI ID Copied!");
+                        }}
+                        className="text-rose-600 text-xs font-bold px-2 py-1 bg-rose-50 rounded hover:bg-rose-100"
+                      >
+                        COPY
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-400 italic">
+                    Open GPay, PhonePe, or Paytm and scan the code.
+                  </p>
+
+                  <a
+                    href={paymentData.url}
+                    className="block w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-rose-600 transition-colors shadow-lg"
+                  >
+                    Open Payment App
+                  </a>
+                </div>
               </div>
             </div>
           </div>
