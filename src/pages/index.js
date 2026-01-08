@@ -17,6 +17,7 @@ export default function Home() {
   const [myOrderIds, setMyOrderIds] = useState([]);
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [trackedOrders, setTrackedOrders] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Auto-expand all categories with search results when searching
   const [expandedCategories, setExpandedCategories] = useState(new Set(["Combos"]));
@@ -209,8 +210,7 @@ export default function Home() {
 
   const totalPrice = cart.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
 
-  // 3. Place Order Logic
-  const placeOrder = async () => {
+  const placeOrderWithMode = async (mode) => {
     if (cart.length === 0) return alert("Tray is empty!");
 
     // Double-check: Read config directly from Firestore before placing order
@@ -238,7 +238,7 @@ export default function Home() {
         items: cart,
         totalPrice: total,
         status: "pending",
-        paymentStatus: "awaiting_verification",
+        paymentStatus: mode === "UPI" ? "awaiting_verification" : "cash",
         timestamp: serverTimestamp(),
       });
 
@@ -247,12 +247,16 @@ export default function Home() {
       setMyOrderIds(newOrderIds);
       localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
 
-      const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "vishhh@slc";
-      const businessName = "Elysian Cafe";
-      const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
-      alert(`Redirecting to payment for ₹${total}... Please complete payment and return to this page.`);
-      if (typeof window !== "undefined") {
-        window.location.href = upiUrl;
+      if (mode === "UPI") {
+        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "vishhh@slc";
+        const businessName = "Ivory Café";
+        const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
+        alert(`Redirecting to payment for ₹${total}... Please complete payment and return to this page.`);
+        if (typeof window !== "undefined") {
+          window.location.href = upiUrl;
+        }
+      } else {
+        alert("Order placed. Please pay cash at the counter.");
       }
 
       alert("🍓 Order Placed! You can track it in 'My Orders'.");
@@ -283,7 +287,7 @@ export default function Home() {
         {/* Center Content: Title */}
         <div className="flex-1 flex flex-col items-center justify-center">
           <h1 className="text-3xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
-            ELYSIAN
+            Ivory Café
           </h1>
           <p className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-1 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
         </div>
@@ -601,7 +605,7 @@ export default function Home() {
               </div>
             )}
             <button
-              onClick={placeOrder}
+              onClick={() => setShowPaymentModal(true)}
               disabled={cart.length === 0 || !acceptingOrders}
               className={`w-full py-4 rounded-2xl font-bold text-lg md:transition-all md:duration-300 shadow-xl transform font-inter tracking-wide ${cart.length === 0 || !acceptingOrders
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -674,6 +678,38 @@ export default function Home() {
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-rose-50/50">
+                <h3 className="font-cinzel font-bold text-2xl text-gray-900">Select Payment Mode</h3>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <button
+                  onClick={() => { setShowPaymentModal(false); placeOrderWithMode("UPI"); }}
+                  disabled={cart.length === 0 || !acceptingOrders}
+                  className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-rose-600 to-pink-600 text-white hover:from-rose-700 hover:to-pink-700'}`}
+                >
+                  UPI
+                </button>
+                <button
+                  onClick={() => { setShowPaymentModal(false); placeOrderWithMode("Cash"); }}
+                  disabled={cart.length === 0 || !acceptingOrders}
+                  className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-rose-600'}`}
+                >
+                  Cash
+                </button>
               </div>
             </div>
           </div>
