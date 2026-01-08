@@ -28,28 +28,52 @@ export default function Home() {
   const [userName, setUserName] = useState("");
   const [user, setUser] = useState(null);
 
+  const [showSignInHint, setShowSignInHint] = useState(false);
+
+  // Trigger hint fade-in after 2.5 seconds, then fade out after 5s
+  useEffect(() => {
+    let showTimer, hideTimer;
+    if (!user) {
+      showTimer = setTimeout(() => {
+        setShowSignInHint(true);
+        // Auto-hide after 10 seconds of appearing
+        hideTimer = setTimeout(() => {
+          setShowSignInHint(false);
+        }, 10000);
+      }, 2500);
+
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
+    }
+  }, [user]);
+
   // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         setUserName(currentUser.displayName);
+        setShowSignInHint(false); // Hide hint if logged in
         // Load orders for this user
-        // We will update the order fetching logic separately
       }
     });
     return () => unsubscribe();
   }, []);
 
   const handleGoogleLogin = async () => {
+    // ... existing login logic
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      setShowSignInHint(false); // Hide immediately on click/action
     } catch (error) {
       console.error("Login Failed:", error);
       alert("Login failed: " + error.message);
     }
   };
+
 
   const handleLogout = async () => {
     if (!window.confirm("Are you sure you want to log out?")) return;
@@ -413,16 +437,29 @@ export default function Home() {
         <div className="flex items-center gap-2 md:gap-3 md:absolute md:right-8 md:top-1/2 md:transform md:-translate-y-1/2">
           {/* Auth Button */}
           {!user ? (
-            <div className="flex flex-col items-center">
+            <div className="relative">
               <button
-                onClick={handleGoogleLogin}
+                onClick={() => {
+                  setShowSignInHint(false);
+                  handleGoogleLogin();
+                }}
                 className="bg-white/10 hover:bg-white/20 text-rose-300 hover:text-white px-3 py-1.5 rounded-full text-xs md:text-sm font-cinzel transition-all border border-rose-300/30 backdrop-blur-sm"
               >
                 Sign In
               </button>
-              <span className="text-[8px] md:text-[10px] text-rose-200 mt-1 whitespace-nowrap opacity-80 font-inter">
-                Sign in to save your recent orders
-              </span>
+              {/* FLOATING SIGN IN HINT (ANCHORED TO BUTTON) */}
+              <div
+                className={`absolute top-full right-0 mt-3 z-[100] w-48 transition-all duration-1000 ease-in-out pointer-events-none ${showSignInHint ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+              >
+                <div className="relative bg-white text-gray-900 px-4 py-3 rounded-xl shadow-xl border border-rose-100/50 text-xs font-inter text-left">
+                  {/* Upward Arrow */}
+                  <div className="absolute -top-1.5 right-4 w-3 h-3 bg-white rotate-45 border-l border-t border-rose-100/50"></div>
+                  <p className="leading-relaxed">
+                    <span className="font-bold text-rose-600 block mb-0.5">Tip:</span>
+                    Sign in to save your recent orders 🍓
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2 mr-2">
@@ -666,6 +703,8 @@ export default function Home() {
               })}
             </div>
           )}
+
+
 
           {/* FLOATING MOBILE CART BAR */}
           {cart.length > 0 && (
