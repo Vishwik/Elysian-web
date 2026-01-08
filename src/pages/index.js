@@ -248,7 +248,7 @@ export default function Home() {
       localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
 
       if (mode === "UPI") {
-        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "vishhh@slc";
+        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
         const businessName = "Ivory Café";
         const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
         alert(`Redirecting to payment for ₹${total}... Please complete payment and return to this page.`);
