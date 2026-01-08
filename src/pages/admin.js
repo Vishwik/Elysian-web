@@ -29,7 +29,12 @@ export default function AdminPage() {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
+    console.log("DEBUG: Cloudinary Config Check");
+    console.log("Cloud Name:", cloudName ? "EXISTS (" + cloudName + ")" : "MISSING");
+    console.log("Upload Preset:", uploadPreset ? "EXISTS" : "MISSING");
+
     if (!cloudName || !uploadPreset) {
+      alert(`Configuration Missing! Cloud Name: ${cloudName || 'MISSING'}, Preset: ${uploadPreset || 'MISSING'}`);
       throw new Error("Cloudinary configuration missing. Please check .env.local");
     }
 
