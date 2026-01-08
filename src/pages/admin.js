@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db, auth, storage } from '../lib/firebaseConfig';
+import { db, auth } from '../lib/firebaseConfig';
 import { collection, updateDoc, doc, addDoc, deleteDoc, writeBatch, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/router';
 
 export default function AdminPage() {
@@ -26,33 +25,62 @@ export default function AdminPage() {
   const [itemUploading, setItemUploading] = useState({});
   const [itemProgress, setItemProgress] = useState({});
 
+  const uploadToCloudinary = async (file, onProgress) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      throw new Error("Cloudinary configuration missing. Please check .env.local");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", uploadPreset);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const progress = (e.loaded / e.total) * 100;
+          onProgress(progress);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText);
+          resolve(response.secure_url);
+        } else {
+          reject(new Error("Upload failed"));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.send(formData);
+    });
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploading(true);
-    const storageRef = ref(storage, `menu-items/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      },
-      (error) => {
-        console.error("Upload failed:", error);
+    uploadToCloudinary(file, (progress) => {
+      setUploadProgress(progress);
+    })
+      .then((url) => {
+        setNewItem((prev) => ({ ...prev, imageUrl: url }));
         setUploading(false);
-        alert("Image upload failed!");
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          setNewItem((prev) => ({ ...prev, imageUrl: downloadURL }));
-          setUploading(false);
-          alert("Image uploaded successfully!");
-        });
-      }
-    );
+        alert("Image uploaded successfully!");
+      })
+      .catch((err) => {
+        console.error("Upload error:", err);
+        setUploading(false);
+        alert("Image upload failed: " + err.message);
+      });
   };
 
   const handleItemImageUpload = (e, itemId) => {
@@ -60,28 +88,20 @@ export default function AdminPage() {
     if (!file) return;
 
     setItemUploading(prev => ({ ...prev, [itemId]: true }));
-    const storageRef = ref(storage, `menu-items/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setItemProgress(prev => ({ ...prev, [itemId]: progress }));
-      },
-      (error) => {
-        console.error("Upload failed:", error);
+    uploadToCloudinary(file, (progress) => {
+      setItemProgress(prev => ({ ...prev, [itemId]: progress }));
+    })
+      .then((url) => {
+        handleItemChange(itemId, "imageUrl", url);
         setItemUploading(prev => ({ ...prev, [itemId]: false }));
-        alert("Image upload failed!");
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          handleItemChange(itemId, "imageUrl", downloadURL);
-          setItemUploading(prev => ({ ...prev, [itemId]: false }));
-          alert("Image updated successfully!");
-        });
-      }
-    );
+        alert("Image updated successfully!");
+      })
+      .catch((err) => {
+        console.error("Upload error:", err);
+        setItemUploading(prev => ({ ...prev, [itemId]: false }));
+        alert("Image upload failed: " + err.message);
+      });
   };
 
   const [newItem, setNewItem] = useState({
