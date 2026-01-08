@@ -233,10 +233,12 @@ export default function Home() {
     }
 
     try {
+      const total = cart.reduce((s, i) => s + i.price, 0);
       const docRef = await addDoc(collection(db, "orders"), {
         items: cart,
-        totalPrice: cart.reduce((s, i) => s + i.price, 0),
-        status: "pending", // Matches your logic
+        totalPrice: total,
+        status: "pending",
+        paymentStatus: "awaiting_verification",
         timestamp: serverTimestamp(),
       });
 
@@ -244,6 +246,14 @@ export default function Home() {
       const newOrderIds = [...myOrderIds, docRef.id];
       setMyOrderIds(newOrderIds);
       localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
+
+      const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "vishhh@slc";
+      const businessName = "Elysian Cafe";
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
+      alert(`Redirecting to payment for ₹${total}... Please complete payment and return to this page.`);
+      if (typeof window !== "undefined") {
+        window.location.href = upiUrl;
+      }
 
       alert("🍓 Order Placed! You can track it in 'My Orders'.");
       setCart([]);
