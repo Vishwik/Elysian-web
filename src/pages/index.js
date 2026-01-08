@@ -1,7 +1,9 @@
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { db } from '../lib/firebaseConfig';
+
+import { db, auth } from '../lib/firebaseConfig';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId, setDoc } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ShoppingCart, Clock, X, Info } from 'lucide-react';
@@ -24,6 +26,42 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [paymentData, setPaymentData] = useState(null);
   const [userName, setUserName] = useState("");
+  const [user, setUser] = useState(null);
+
+  // Auth State Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setUserName(currentUser.displayName);
+        // Load orders for this user
+        // We will update the order fetching logic separately
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login Failed:", error);
+      alert("Login failed: " + error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!window.confirm("Are you sure you want to log out?")) return;
+    try {
+      await signOut(auth);
+      setUserName("");
+      setMyOrderIds([]); // Clear local orders view on logout
+      alert("Logged out successfully");
+    } catch (error) {
+      console.error("Logout Failed:", error);
+    }
+  };
 
   // Auto-expand all categories with search results when searching
   const [expandedCategories, setExpandedCategories] = useState(new Set(["Combos"]));
@@ -58,27 +96,42 @@ export default function Home() {
   }, []);
 
   // Listen to My Orders updates
+  // Listen to My Orders (Guest or Logged In)
   useEffect(() => {
-    if (myOrderIds.length === 0) return;
+    let unsubscribe = () => { };
 
-    // Firestore limitation: 'in' queries support max 10 values.
-    // We'll take the last 10 orders.
-    const recentIds = myOrderIds.slice(-10);
+    if (user) {
+      // LOGGED IN: Fetch by userId
+      const q = query(
+        collection(db, "orders"),
+        where("userId", "==", user.uid)
+      );
 
-    const q = query(
-      collection(db, "orders"),
-      where(documentId(), "in", recentIds)
-    );
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        setTrackedOrders(orders);
+      });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-      // Sort by timestamp desc manually since we can't easily order by timestamp with 'in' query on ID
-      orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-      setTrackedOrders(orders);
-    });
+    } else if (myOrderIds.length > 0) {
+      // GUEST: Fetch by local IDs
+      const recentIds = myOrderIds.slice(-10);
+      const q = query(
+        collection(db, "orders"),
+        where(documentId(), "in", recentIds)
+      );
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        setTrackedOrders(orders);
+      });
+    } else {
+      setTrackedOrders([]);
+    }
 
     return () => unsubscribe();
-  }, [myOrderIds]);
+  }, [user, myOrderIds]);
 
   // 1. Fetch Menu from Firebase (Real-time) with simple local cache
   useEffect(() => {
@@ -238,6 +291,7 @@ export default function Home() {
         status: "pending",
         paymentStatus: "paid_unverified",
         customerName: paymentData.customerName,
+        userId: user ? user.uid : null, // Link order to user
         timestamp: serverTimestamp(),
       });
 
@@ -310,7 +364,9 @@ export default function Home() {
         totalPrice: total,
         status: "pending",
         paymentStatus: "cash",
+        paymentStatus: "cash",
         customerName: userName,
+        userId: user ? user.uid : null, // Link order to user
         timestamp: serverTimestamp(),
       });
 
@@ -354,29 +410,54 @@ export default function Home() {
             <p className="text-rose-100/80 font-cinzel text-sm mt-2 animate-fadeIn">Welcome, {userName}</p>
           )}
         </div>
-        <button
-          onClick={() => setShowOrderHistory(true)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 md:right-8 md:top-1/2 md:-translate-y-1/2 text-rose-300 hover:text-white transition-all active:scale-95"
-          aria-label="My Orders"
-        >
-          {/* ... existing button content ... */}
-          <div className="hidden md:flex items-center gap-2 border border-rose-300/30 px-4 py-2 rounded-full hover:bg-rose-900/40 transition-all ml-4">
-            <span className="text-sm font-bold font-inter">My Orders</span>
-            {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
-              <span className="bg-rose-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse shadow-glow">
-                {trackedOrders.filter(o => o.status === 'pending').length}
-              </span>
-            )}
-          </div>
-          <div className="md:hidden relative p-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
-            <Clock className="w-5 h-5" />
-            {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse border border-[#1a1a1a]">
-                {trackedOrders.filter(o => o.status === 'pending').length}
-              </span>
-            )}
-          </div>
-        </button>
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 md:right-8 flex items-center gap-3">
+          {/* Auth Button */}
+          {!user ? (
+            <button
+              onClick={handleGoogleLogin}
+              className="bg-white/10 hover:bg-white/20 text-rose-300 hover:text-white px-3 py-1.5 rounded-full text-xs md:text-sm font-cinzel transition-all border border-rose-300/30 backdrop-blur-sm"
+            >
+              Sign In
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 mr-2">
+              <img
+                src={user.photoURL}
+                alt="User"
+                className="w-8 h-8 rounded-full border border-rose-300/50 hidden md:block"
+              />
+              <button
+                onClick={handleLogout}
+                className="text-rose-300/70 hover:text-rose-300 text-xs md:text-sm font-inter transition-colors hidden md:block"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setShowOrderHistory(true)}
+            className="relative text-rose-300 hover:text-white transition-all active:scale-95"
+            aria-label="My Orders"
+          >
+            <div className="hidden md:flex items-center gap-2 border border-rose-300/30 px-4 py-2 rounded-full hover:bg-rose-900/40 transition-all ml-4">
+              <span className="text-sm font-bold font-inter">My Orders</span>
+              {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
+                <span className="bg-rose-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse shadow-glow">
+                  {trackedOrders.filter(o => o.status === 'pending').length}
+                </span>
+              )}
+            </div>
+            <div className="md:hidden relative p-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
+              <Clock className="w-5 h-5" />
+              {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse border border-[#1a1a1a]">
+                  {trackedOrders.filter(o => o.status === 'pending').length}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
@@ -804,14 +885,30 @@ export default function Home() {
               </div>
               <div className="p-6 space-y-4">
                 <button
-                  onClick={() => { setShowPaymentModal(false); setSelectedPaymentMode("UPI"); setShowNameModal(true); }}
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedPaymentMode("UPI");
+                    if (user) {
+                      placeOrderWithMode("UPI");
+                    } else {
+                      setShowNameModal(true);
+                    }
+                  }}
                   disabled={cart.length === 0 || !acceptingOrders}
                   className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-rose-600 to-pink-600 text-white hover:from-rose-700 hover:to-pink-700'}`}
                 >
                   UPI
                 </button>
                 <button
-                  onClick={() => { setShowPaymentModal(false); setSelectedPaymentMode("Cash"); setShowNameModal(true); }}
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedPaymentMode("Cash");
+                    if (user) {
+                      placeOrderWithMode("Cash");
+                    } else {
+                      setShowNameModal(true);
+                    }
+                  }}
                   disabled={cart.length === 0 || !acceptingOrders}
                   className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-rose-600'}`}
                 >
