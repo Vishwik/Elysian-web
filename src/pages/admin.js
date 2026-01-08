@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { db, auth } from '../lib/firebaseConfig';
+import { db, auth, storage } from '../lib/firebaseConfig';
 import { collection, updateDoc, doc, addDoc, deleteDoc, writeBatch, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/router';
 
 export default function AdminPage() {
@@ -14,7 +15,75 @@ export default function AdminPage() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [availabilityFilter, setAvailabilityFilter] = useState("All");
   const [acceptingOrders, setAcceptingOrders] = useState(true);
+  const [upiId, setUpiId] = useState("");
   const [openCategory, setOpenCategory] = useState("Combos"); // Default open category
+
+  // Upload State
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Per-item Upload State
+  const [itemUploading, setItemUploading] = useState({});
+  const [itemProgress, setItemProgress] = useState({});
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const storageRef = ref(storage, `menu-items/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        setUploading(false);
+        alert("Image upload failed!");
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setNewItem((prev) => ({ ...prev, imageUrl: downloadURL }));
+          setUploading(false);
+          alert("Image uploaded successfully!");
+        });
+      }
+    );
+  };
+
+  const handleItemImageUpload = (e, itemId) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setItemUploading(prev => ({ ...prev, [itemId]: true }));
+    const storageRef = ref(storage, `menu-items/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setItemProgress(prev => ({ ...prev, [itemId]: progress }));
+      },
+      (error) => {
+        console.error("Upload failed:", error);
+        setItemUploading(prev => ({ ...prev, [itemId]: false }));
+        alert("Image upload failed!");
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          handleItemChange(itemId, "imageUrl", downloadURL);
+          setItemUploading(prev => ({ ...prev, [itemId]: false }));
+          alert("Image updated successfully!");
+        });
+      }
+    );
+  };
+
   const [newItem, setNewItem] = useState({
     name: "",
     price: "",
@@ -46,7 +115,7 @@ export default function AdminPage() {
   }, []);
 
 
-  // Fetch and listen to order acceptance state
+  // Fetch and listen to order acceptance state AND UPI ID
   useEffect(() => {
     if (!user) return;
 
@@ -55,20 +124,22 @@ export default function AdminPage() {
     // Initial fetch
     getDoc(configRef).then((snap) => {
       if (snap.exists()) {
-        setAcceptingOrders(snap.data().acceptingOrders !== false);
+        const data = snap.data();
+        setAcceptingOrders(data.acceptingOrders !== false);
+        if (data.upiId) setUpiId(data.upiId);
       } else {
         // Initialize if doesn't exist
-        setDoc(configRef, { acceptingOrders: true });
+        setDoc(configRef, { acceptingOrders: true, upiId: "" }, { merge: true });
       }
     });
 
-    // Real-time listener
     const unsubscribe = onSnapshot(configRef, (snap) => {
       if (snap.exists()) {
-        setAcceptingOrders(snap.data().acceptingOrders !== false);
+        const data = snap.data();
+        setAcceptingOrders(data.acceptingOrders !== false);
+        if (data.upiId) setUpiId(data.upiId);
       }
     });
-
     return () => unsubscribe();
   }, [user]);
 
@@ -80,6 +151,21 @@ export default function AdminPage() {
     } catch (e) {
       console.error("Error updating order acceptance:", e);
       alert("Failed to update order acceptance status");
+    }
+  };
+
+  const updateUpiId = async () => {
+    try {
+      const configRef = doc(db, "system", "config");
+      await setDoc(
+        configRef,
+        { upiId: upiId.trim() },
+        { merge: true }
+      );
+      alert("UPI ID updated successfully");
+    } catch (e) {
+      console.error("Error updating UPI ID:", e);
+      alert("Failed to update UPI ID");
     }
   };
 
@@ -201,21 +287,36 @@ export default function AdminPage() {
         <h1 className="text-4xl font-bold">Admin Dashboard</h1>
         <div className="flex items-center gap-4">
           {/* Accept Orders Toggle */}
-          <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow border">
-            <span className="text-sm font-semibold text-gray-700">Accept Orders:</span>
-            <button
-              onClick={toggleAcceptOrders}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${acceptingOrders ? 'bg-green-500' : 'bg-gray-300'
-                }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${acceptingOrders ? 'translate-x-6' : 'translate-x-1'
+          <div className="flex items-center gap-6 bg-white px-4 py-2 rounded-lg shadow border">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">Accept Orders:</span>
+              <button
+                onClick={toggleAcceptOrders}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${acceptingOrders ? 'bg-green-500' : 'bg-gray-300'
                   }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${acceptingOrders ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                />
+              </button>
+              <span className={`text-sm font-bold ${acceptingOrders ? 'text-green-600' : 'text-red-600'}`}>
+                {acceptingOrders ? 'ON' : 'OFF'}
+              </span>
+            </div>
+
+            <div className="h-6 w-px bg-gray-200"></div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-700">UPI ID:</label>
+              <input
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="Enter UPI ID"
+                className="border p-1 px-2 rounded text-sm w-40"
               />
-            </button>
-            <span className={`text-sm font-bold ${acceptingOrders ? 'text-green-600' : 'text-red-600'}`}>
-              {acceptingOrders ? 'ON' : 'OFF'}
-            </span>
+              <button onClick={updateUpiId} className="bg-gray-900 text-white px-3 py-1 rounded text-xs font-bold hover:bg-gray-700">Save</button>
+            </div>
           </div>
           <div className="space-x-2">
             <a href="/orders" className="bg-purple-600 text-white px-4 py-2 rounded font-bold hover:bg-purple-700 transition">View Orders</a>
@@ -310,13 +411,32 @@ export default function AdminPage() {
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Image URL</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Image</label>
+            <div className="flex gap-4 items-center">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                className="border p-2 rounded w-full bg-white"
+              />
+              {uploading && (
+                <span className="text-sm font-bold text-blue-600 self-center whitespace-nowrap">
+                  {Math.round(uploadProgress)}%
+                </span>
+              )}
+            </div>
+
+            {/* Hidden URL input to store the result, or manual override */}
             <input
-              className="border p-2 rounded w-full"
-              placeholder="Enter image URL"
+              className="border p-2 rounded w-full mt-2 text-sm text-gray-500"
+              placeholder="Image URL (will auto-fill after upload)"
               value={newItem.imageUrl}
               onChange={e => setNewItem({ ...newItem, imageUrl: e.target.value })}
             />
+            {newItem.imageUrl && (
+              <img src={newItem.imageUrl} alt="Preview" className="h-20 w-20 object-cover rounded mt-2 border" />
+            )}
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
@@ -414,7 +534,21 @@ export default function AdminPage() {
                             </select>
                           </div>
                           <div className="col-span-2">
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">Image URL</label>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Image</label>
+                            <div className="flex gap-2 items-center mb-2">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleItemImageUpload(e, item.id)}
+                                disabled={itemUploading[item.id]}
+                                className="border p-1 rounded w-full text-xs bg-white"
+                              />
+                              {itemUploading[item.id] && (
+                                <span className="text-xs font-bold text-blue-600 whitespace-nowrap">
+                                  {Math.round(itemProgress[item.id] || 0)}%
+                                </span>
+                              )}
+                            </div>
                             <input className="border p-2 rounded w-full text-sm" value={item.imageUrl || ""} onChange={e => handleItemChange(item.id, "imageUrl", e.target.value)} placeholder="Enter image URL" />
                           </div>
                           <div className="col-span-2">

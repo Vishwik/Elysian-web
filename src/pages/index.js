@@ -50,6 +50,10 @@ export default function Home() {
       if (saved) {
         setMyOrderIds(JSON.parse(saved));
       }
+      const savedName = localStorage.getItem("elysian_user_name");
+      if (savedName) {
+        setUserName(savedName);
+      }
     }
   }, []);
 
@@ -124,13 +128,20 @@ export default function Home() {
   }, []);
 
   // Check if orders are being accepted (real-time listener for UI updates)
+  const [configUpiId, setConfigUpiId] = useState("");
+
   useEffect(() => {
     const configRef = doc(db, "system", "config");
     const unsubscribe = onSnapshot(configRef, (snap) => {
       if (snap.exists()) {
-        const accepting = snap.data().acceptingOrders;
+        const data = snap.data();
+        const accepting = data.acceptingOrders;
         // Explicitly check: if field exists and is false, then false; otherwise true
         setAcceptingOrders(accepting !== false && accepting !== undefined);
+
+        if (data.upiId) {
+          setConfigUpiId(data.upiId);
+        }
       } else {
         // Default to accepting orders if config doesn't exist
         setAcceptingOrders(true);
@@ -276,7 +287,7 @@ export default function Home() {
         const newOrderRef = doc(collection(db, "orders"));
         const orderId = newOrderRef.id;
 
-        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
+        const myUpiId = configUpiId || process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
         const businessName = "Ivory Café";
         const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + orderId)}&tr=${encodeURIComponent(orderId)}`;
 
@@ -339,6 +350,9 @@ export default function Home() {
             Ivory Café
           </h1>
           <p className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-1 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
+          {userName && (
+            <p className="text-rose-100/80 font-cinzel text-sm mt-2 animate-fadeIn">Welcome, {userName}</p>
+          )}
         </div>
         <button
           onClick={() => setShowOrderHistory(true)}
@@ -836,6 +850,7 @@ export default function Home() {
                       alert("Please enter your name");
                       return;
                     }
+                    localStorage.setItem("elysian_user_name", userName);
                     setShowNameModal(false);
                     placeOrderWithMode(selectedPaymentMode);
                   }}
