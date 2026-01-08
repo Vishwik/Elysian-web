@@ -2,7 +2,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { db } from '../lib/firebaseConfig';
-import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId, setDoc } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ShoppingCart, Clock, X, Info } from 'lucide-react';
 
@@ -216,6 +216,36 @@ export default function Home() {
 
   const totalPrice = cart.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
 
+  const confirmUpiOrder = async () => {
+    if (!paymentData) return;
+
+    try {
+      // Create the order in Firestore using the pre-generated ID
+      await setDoc(doc(db, "orders", paymentData.id), {
+        items: paymentData.cart,
+        totalPrice: paymentData.amount,
+        status: "pending",
+        paymentStatus: "paid_unverified",
+        customerName: paymentData.customerName,
+        timestamp: serverTimestamp(),
+      });
+
+      // Save to local tracked orders
+      const newOrderIds = [...myOrderIds, paymentData.id];
+      setMyOrderIds(newOrderIds);
+      localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
+
+      alert("🍓 Payment Confirmed! Order Placed.");
+      setCart([]);
+      setUserName("");
+      setSelectedPaymentMode(null);
+      setPaymentData(null);
+    } catch (e) {
+      console.error("Error confirming order:", e);
+      alert("Error confirming order. Please try again.");
+    }
+  };
+
   const placeOrderWithMode = async (mode) => {
     if (cart.length === 0) return alert("Tray is empty!");
 
@@ -240,11 +270,35 @@ export default function Home() {
 
     try {
       const total = cart.reduce((s, i) => s + i.price, 0);
+
+      if (mode === "UPI") {
+        // Prepare the order ID but DO NOT SAVE yet
+        const newOrderRef = doc(collection(db, "orders"));
+        const orderId = newOrderRef.id;
+
+        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
+        const businessName = "Ivory Café";
+        const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + orderId)}&tr=${encodeURIComponent(orderId)}`;
+
+        setPaymentData({
+          url: upiUrl,
+          amount: total,
+          id: orderId,
+          vpa: myUpiId,
+          cart: [...cart], // Snapshot current cart
+          customerName: userName
+        });
+
+        // Modal will open because paymentData is set
+        return;
+      }
+
+      // CASH ORDER - Save immediately
       const docRef = await addDoc(collection(db, "orders"), {
         items: cart,
         totalPrice: total,
         status: "pending",
-        paymentStatus: mode === "UPI" ? "awaiting_verification" : "cash",
+        paymentStatus: "cash",
         customerName: userName,
         timestamp: serverTimestamp(),
       });
@@ -253,22 +307,6 @@ export default function Home() {
       const newOrderIds = [...myOrderIds, docRef.id];
       setMyOrderIds(newOrderIds);
       localStorage.setItem("elysian_my_orders", JSON.stringify(newOrderIds));
-
-      if (mode === "UPI") {
-        const myUpiId = process.env.NEXT_PUBLIC_UPI_ID || "7093324151@ybl";
-        const businessName = "Ivory Café";
-        const upiUrl = `upi://pay?pa=${encodeURIComponent(myUpiId)}&pn=${encodeURIComponent(businessName)}&am=${encodeURIComponent(total)}&cu=INR&tn=${encodeURIComponent("Order " + docRef.id)}&tr=${encodeURIComponent(docRef.id)}`;
-
-        setPaymentData({
-          url: upiUrl,
-          amount: total,
-          id: docRef.id,
-          vpa: myUpiId
-        });
-        // Removed automatic redirect to prevent "Transaction failed" from deep links
-      } else {
-        alert("Order placed. Please pay cash at the counter.");
-      }
 
       alert("🍓 Order Placed! You can track it in 'My Orders'.");
       setCart([]);
@@ -821,7 +859,13 @@ export default function Home() {
               <div className="bg-rose-50/80 p-6 border-b border-rose-100 flex justify-between items-center">
                 <h3 className="font-cinzel font-bold text-2xl text-gray-900">Scan to Pay</h3>
                 <button
-                  onClick={() => setPaymentData(null)}
+                  onClick={() => {
+                    if (window.confirm("Did you complete the payment?\n\nPress OK to Confirm Order.\nPress Cancel to Discard.")) {
+                      confirmUpiOrder();
+                    } else {
+                      setPaymentData(null);
+                    }
+                  }}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
                 >
                   ✕
@@ -872,6 +916,13 @@ export default function Home() {
                   >
                     Open Payment App
                   </a>
+
+                  <button
+                    onClick={confirmUpiOrder}
+                    className="block w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-green-700 transition-colors shadow-lg animate-pulse"
+                  >
+                    I have made the payment
+                  </button>
                 </div>
               </div>
             </div>
