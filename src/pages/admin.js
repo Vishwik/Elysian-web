@@ -7,8 +7,8 @@ import { useRouter } from 'next/router';
 export default function AdminPage() {
   const [user, setUser] = useState(null);
   const router = useRouter();
-  const categories = ["Dips", "Pancakes", "Burgers", "Pizzas", "Combos"];
-  const CATEGORY_ORDER = ["Combos", "Burgers", "Pizzas", "Pancakes", "Dips"]; // Same order as main page
+  const categories = ["Dips", "Pancakes", "Burgers", "Pizzas", "Combos", "Cheesecakes", "Specials"];
+  const CATEGORY_ORDER = ["Specials", "Combos", "Burgers", "Pizzas", "Pancakes", "Cheesecakes", "Dips"]; // Same order as main page
   const [menu, setMenu] = useState([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -49,9 +49,9 @@ export default function AdminPage() {
   // Fetch and listen to order acceptance state
   useEffect(() => {
     if (!user) return;
-    
+
     const configRef = doc(db, "system", "config");
-    
+
     // Initial fetch
     getDoc(configRef).then((snap) => {
       if (snap.exists()) {
@@ -85,25 +85,25 @@ export default function AdminPage() {
 
   const seedItems = async () => {
     const fullMenu = [
-      { name: "Strawberry Dip", price: 79, category: "Dips", vegType: "Veg", available: true },
-      { name: "Strawberry Thangulu", price: 69, category: "Dips", vegType: "Veg", available: true },
-      { name: "Marshmallow Dip", price: 89, category: "Dips", vegType: "Veg", available: true },
-      { name: "Marshmallow Toasted (5pcs)", price: 79, category: "Dips", vegType: "Veg", available: true },
-      { name: "Biscuit Marshmallow (5pcs)", price: 69, category: "Dips", vegType: "Veg", available: true },
-      { name: "Pancakes (Plain)", price: 39, category: "Pancakes", vegType: "Veg", available: true },
-      { name: "Pancakes + Honey", price: 49, category: "Pancakes", vegType: "Veg", available: true },
-      { name: "Pancakes + Honey & Fruits", price: 59, category: "Pancakes", vegType: "Veg", available: true },
-      { name: "Pancakes + Nutella", price: 79, category: "Pancakes", vegType: "Veg", available: true },
-      { name: "Veg Burger", price: 79, category: "Burgers", vegType: "Veg", available: true },  
-      { name: "Burger Cheese Veg", price: 89, category: "Burgers", vegType: "Veg", available: true },
-      { name: "Burger Non-Veg", price: 99, category: "Burgers", vegType: "Non-Veg", available: true },
-      { name: "Burger Cheese Non-Veg", price: 109, category: "Burgers", vegType: "Non-Veg", available: true },
-      { name: "Mini Pizzas Veg", price: 59, category: "Pizzas", vegType: "Veg", available: true },
-      { name: "Mini Pizzas Non-Veg", price: 69, category: "Pizzas", vegType: "Non-Veg", available: true },
-      { name: "Pancakes + Strawberry Dip", price: 99, category: "Combos", vegType: "Veg", available: true },
-      { name: "Marshmallows Dip + Nutella Pancake", price: 129, category: "Combos", vegType: "Veg", available: true },
-      { name: "Burger + Mini Pizza (Veg)", price: 119, category: "Combos", vegType: "Veg", available: true },
-      { name: "Burger + Mini Pizza (Non-Veg)", price: 139, category: "Combos", vegType: "Non-Veg", available: true },
+      { name: "Strawberry Dip", price: 79, category: "Dips", vegType: "Veg", available: true, description: "Fresh strawberries paired with a rich chocolate dip." },
+      { name: "Strawberry Thangulu", price: 69, category: "Dips", vegType: "Veg", available: true, description: "Crunchy candied strawberries on a stick." },
+      { name: "Marshmallow Dip", price: 89, category: "Dips", vegType: "Veg", available: true, description: "Fluffy marshmallows with a side of warm chocolate sauce." },
+      { name: "Marshmallow Toasted (5pcs)", price: 79, category: "Dips", vegType: "Veg", available: true, description: "Perfectly toasted golden-brown marshmallows." },
+      { name: "Biscuit Marshmallow (5pcs)", price: 69, category: "Dips", vegType: "Veg", available: true, description: "Marshmallows sandwiched between crispy biscuits." },
+      { name: "Pancakes (Plain)", price: 39, category: "Pancakes", vegType: "Veg", available: true, description: "Fluffy, golden pancakes served with butter." },
+      { name: "Pancakes + Honey", price: 49, category: "Pancakes", vegType: "Veg", available: true, description: "Classic pancakes drizzled with pure honey." },
+      { name: "Pancakes + Honey & Fruits", price: 59, category: "Pancakes", vegType: "Veg", available: true, description: "Pancakes topped with honey and fresh seasonal fruits." },
+      { name: "Pancakes + Nutella", price: 79, category: "Pancakes", vegType: "Veg", available: true, description: "Indulgent pancakes smothered in Nutella." },
+      { name: "Veg Burger", price: 79, category: "Burgers", vegType: "Veg", available: true, description: "Classic vegetable patty burger with fresh lettuce and mayo." },
+      { name: "Burger Cheese Veg", price: 89, category: "Burgers", vegType: "Veg", available: true, description: "Veg burger loaded with a slice of melting cheese." },
+      { name: "Burger Non-Veg", price: 99, category: "Burgers", vegType: "Non-Veg", available: true, description: "Juicy chicken patty burger with special sauce." },
+      { name: "Burger Cheese Non-Veg", price: 109, category: "Burgers", vegType: "Non-Veg", available: true, description: "Chicken burger topped with premium cheese." },
+      { name: "Mini Pizzas Veg", price: 59, category: "Pizzas", vegType: "Veg", available: true, description: "Bite-sized pizzas with fresh veggie toppings." },
+      { name: "Mini Pizzas Non-Veg", price: 69, category: "Pizzas", vegType: "Non-Veg", available: true, description: "Mini pizzas topped with savory chicken chunks." },
+      { name: "Pancakes + Strawberry Dip", price: 99, category: "Combos", vegType: "Veg", available: true, description: "Fluffy pancakes served with our signature strawberry dip." },
+      { name: "Marshmallows Dip + Nutella Pancake", price: 129, category: "Combos", vegType: "Veg", available: true, description: "The ultimate sweet combo of dips and pancakes." },
+      { name: "Burger + Mini Pizza (Veg)", price: 119, category: "Combos", vegType: "Veg", available: true, description: "A satisfying combo of a veg burger and mini pizza." },
+      { name: "Burger + Mini Pizza (Non-Veg)", price: 139, category: "Combos", vegType: "Non-Veg", available: true, description: "A hearty meal with a chicken burger and mini pizza." },
     ];
     try {
       const batch = writeBatch(db);
@@ -205,14 +205,12 @@ export default function AdminPage() {
             <span className="text-sm font-semibold text-gray-700">Accept Orders:</span>
             <button
               onClick={toggleAcceptOrders}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                acceptingOrders ? 'bg-green-500' : 'bg-gray-300'
-              }`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${acceptingOrders ? 'bg-green-500' : 'bg-gray-300'
+                }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  acceptingOrders ? 'translate-x-6' : 'translate-x-1'
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${acceptingOrders ? 'translate-x-6' : 'translate-x-1'
+                  }`}
               />
             </button>
             <span className={`text-sm font-bold ${acceptingOrders ? 'text-green-600' : 'text-red-600'}`}>
@@ -234,18 +232,18 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Search by Name</label>
-            <input 
-              className="border p-2 rounded w-full" 
-              placeholder="Search items by name..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
+            <input
+              className="border p-2 rounded w-full"
+              placeholder="Search items by name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
             />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Category</label>
-            <select 
-              className="border p-2 rounded w-full" 
-              value={categoryFilter} 
+            <select
+              className="border p-2 rounded w-full"
+              value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
             >
               <option>All</option>
@@ -254,9 +252,9 @@ export default function AdminPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Availability</label>
-            <select 
-              className="border p-2 rounded w-full" 
-              value={availabilityFilter} 
+            <select
+              className="border p-2 rounded w-full"
+              value={availabilityFilter}
               onChange={e => setAvailabilityFilter(e.target.value)}
             >
               <option>All</option>
@@ -273,28 +271,28 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Item Name</label>
-            <input 
-              className="border p-2 rounded w-full" 
-              placeholder="Enter item name" 
-              value={newItem.name} 
-              onChange={e => setNewItem({ ...newItem, name: e.target.value })} 
+            <input
+              className="border p-2 rounded w-full"
+              placeholder="Enter item name"
+              value={newItem.name}
+              onChange={e => setNewItem({ ...newItem, name: e.target.value })}
             />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Price (₹)</label>
-            <input 
-              className="border p-2 rounded w-full" 
-              type="number" 
-              placeholder="Enter price" 
-              value={newItem.price} 
-              onChange={e => setNewItem({ ...newItem, price: e.target.value })} 
+            <input
+              className="border p-2 rounded w-full"
+              type="number"
+              placeholder="Enter price"
+              value={newItem.price}
+              onChange={e => setNewItem({ ...newItem, price: e.target.value })}
             />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
-            <select 
-              className="border p-2 rounded w-full" 
-              value={newItem.category} 
+            <select
+              className="border p-2 rounded w-full"
+              value={newItem.category}
               onChange={e => setNewItem({ ...newItem, category: e.target.value })}
             >
               {categories.map(c => <option key={c}>{c}</option>)}
@@ -302,9 +300,9 @@ export default function AdminPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Veg Type</label>
-            <select 
-              className="border p-2 rounded w-full" 
-              value={newItem.vegType} 
+            <select
+              className="border p-2 rounded w-full"
+              value={newItem.vegType}
               onChange={e => setNewItem({ ...newItem, vegType: e.target.value })}
             >
               <option>Veg</option>
@@ -313,36 +311,36 @@ export default function AdminPage() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Image URL</label>
-            <input 
-              className="border p-2 rounded w-full" 
-              placeholder="Enter image URL" 
-              value={newItem.imageUrl} 
-              onChange={e => setNewItem({ ...newItem, imageUrl: e.target.value })} 
+            <input
+              className="border p-2 rounded w-full"
+              placeholder="Enter image URL"
+              value={newItem.imageUrl}
+              onChange={e => setNewItem({ ...newItem, imageUrl: e.target.value })}
             />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-            <textarea 
-              className="border p-2 rounded w-full" 
-              placeholder="Enter item description" 
-              value={newItem.description} 
-              onChange={e => setNewItem({ ...newItem, description: e.target.value })} 
+            <textarea
+              className="border p-2 rounded w-full"
+              placeholder="Enter item description"
+              value={newItem.description}
+              onChange={e => setNewItem({ ...newItem, description: e.target.value })}
               rows="3"
             />
           </div>
           <div className="flex items-center gap-4 md:col-span-2">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={newItem.available} 
-                onChange={e => setNewItem({ ...newItem, available: e.target.checked })} 
+              <input
+                type="checkbox"
+                checked={newItem.available}
+                onChange={e => setNewItem({ ...newItem, available: e.target.checked })}
                 className="cursor-pointer"
               />
               <span className="text-sm font-semibold text-gray-700">Available</span>
             </label>
           </div>
-          <button 
-            onClick={handleAdd} 
+          <button
+            onClick={handleAdd}
             className="bg-blue-600 text-white px-4 py-2 rounded font-bold md:col-span-2 hover:bg-blue-700 transition"
           >
             Add Item
@@ -354,7 +352,7 @@ export default function AdminPage() {
       <div className="mb-4">
         <h2 className="text-2xl font-bold mb-4">📋 Menu Items ({filteredMenu.length})</h2>
       </div>
-      
+
       {filteredMenu.length === 0 ? (
         <div className="text-center py-10 bg-white rounded-xl border shadow-sm">
           <p className="text-gray-500">No items found matching your filters.</p>
@@ -364,7 +362,7 @@ export default function AdminPage() {
           {CATEGORY_ORDER.map((cat) => {
             const items = menuByCategory[cat] || [];
             if (items.length === 0) return null; // Don't show empty categories
-            
+
             const isOpen = openCategory === cat;
             return (
               <div key={cat} className="border border-gray-200 rounded-xl bg-white">
@@ -375,10 +373,9 @@ export default function AdminPage() {
                   <span className="text-lg">{cat} ({items.length})</span>
                   <span className="text-blue-600 text-xl">{isOpen ? "−" : "+"}</span>
                 </button>
-                <div 
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    isOpen ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
-                  }`}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[5000px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
                     {items.map(item => (

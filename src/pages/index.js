@@ -12,7 +12,7 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [acceptingOrders, setAcceptingOrders] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const CATEGORY_ORDER = ["Combos", "Burgers", "Pizzas", "Pancakes", "Dips"];
+  const CATEGORY_ORDER = ["Specials", "Combos", "Burgers", "Pizzas", "Pancakes", "Cheesecakes", "Dips"];
   const [openCategory, setOpenCategory] = useState("Combos");
   const [myOrderIds, setMyOrderIds] = useState([]);
   const [showOrderHistory, setShowOrderHistory] = useState(false);
@@ -20,6 +20,7 @@ export default function Home() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const [selectedPaymentMode, setSelectedPaymentMode] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [userName, setUserName] = useState("");
 
   // Auto-expand all categories with search results when searching
@@ -286,25 +287,21 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-gray-900 pb-24 font-inter selection:bg-rose-200">
-      {/* HEADER */}
+      {/* ... existing header ... */}
       <header className="bg-[#1a1a1a] text-[#f8f5f2] py-4 px-6 md:p-6 text-center shadow-2xl sticky top-0 z-50 backdrop-blur-md bg-opacity-90 md:transition-all md:duration-300 border-b border-white/10 flex justify-between md:justify-center items-center relative">
-        {/* Placeholder to balance center alignment on desktop if needed, or just absolute centering */}
-
-        {/* Center Content: Title */}
+        {/* ... existing header content ... */}
         <div className="flex-1 flex flex-col items-center justify-center">
           <h1 className="text-3xl md:text-6xl font-cinzel font-bold tracking-wider transform md:transition-transform md:hover:scale-105 md:duration-300 bg-gradient-to-r from-pink-300 via-rose-200 to-pink-300 bg-clip-text text-transparent drop-shadow-sm">
             Ivory Café
           </h1>
           <p className="text-[0.65rem] md:text-xs uppercase tracking-[0.3em] text-rose-300 mt-1 md:mt-2 font-inter md:animate-pulse">Premium Food Service</p>
         </div>
-
-        {/* My Orders Button - Absolute on Desktop, Relative/Flex on Mobile if needed, but Absolute is cleaner for centered title */}
         <button
           onClick={() => setShowOrderHistory(true)}
           className="absolute right-4 top-1/2 transform -translate-y-1/2 md:right-8 md:top-1/2 md:-translate-y-1/2 text-rose-300 hover:text-white transition-all active:scale-95"
           aria-label="My Orders"
         >
-          {/* Desktop Version */}
+          {/* ... existing button content ... */}
           <div className="hidden md:flex items-center gap-2 border border-rose-300/30 px-4 py-2 rounded-full hover:bg-rose-900/40 transition-all ml-4">
             <span className="text-sm font-bold font-inter">My Orders</span>
             {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
@@ -313,8 +310,6 @@ export default function Home() {
               </span>
             )}
           </div>
-
-          {/* Mobile Version: Icon Only */}
           <div className="md:hidden relative p-2 bg-white/5 rounded-full backdrop-blur-sm border border-white/10">
             <Clock className="w-5 h-5" />
             {trackedOrders.filter(o => o.status === 'pending').length > 0 && (
@@ -328,76 +323,52 @@ export default function Home() {
 
       <main className="max-w-6xl mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
         <style jsx global>{`
+          /* ... existing styles ... */
           @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
           @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateX(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0);
-            }
+          @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+           @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
           }
           @keyframes bounceSlow {
-            0%, 100% {
-              transform: translateY(0);
-            }
-            50% {
-              transform: translateY(-5px);
-            }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
           }
-          .font-cinzel {
-            font-family: 'Cinzel', serif;
-          }
-          .font-inter {
-            font-family: 'Inter', sans-serif;
-          }
+          /* ... classes ... */
+          .font-cinzel { font-family: 'Cinzel', serif; }
+          .font-inter { font-family: 'Inter', sans-serif; }
           .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.5);
           }
+          .animate-scaleIn { animation: scaleIn 0.3s ease-out forwards; }
+          /* ... media queries ... */
           @media (min-width: 768px) {
-            .animate-fadeIn {
-              animation: fadeIn 0.6s ease-out;
-            }
-            .animate-slideIn {
-              animation: slideIn 0.5s ease-out;
-            }
-            .animate-bounce-slow {
-              animation: bounceSlow 2s infinite;
-            }
+            .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
+            .animate-slideIn { animation: slideIn 0.5s ease-out; }
+            .animate-bounce-slow { animation: bounceSlow 2s infinite; }
           }
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, #be185d, #a855f7);
-            border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #9d174d, #9333ea);
-          }
+          /* ... scrollbar ... */
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #be185d, #a855f7); border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #9d174d, #9333ea); }
         `}</style>
 
         {/* MENU SECTION */}
         <div className="flex-1">
+          {/* ... existing search and menu rendering ... */
+            /* Re-rendering the menu items with onClick handler */
+          }
           <div className="mb-6 pb-3 border-b-2 border-pink-200">
             <h2 className="text-4xl md:text-5xl font-cinzel font-bold text-gray-800 mb-2">
               Our Menu
@@ -452,7 +423,6 @@ export default function Home() {
                     <button
                       onClick={() => {
                         if (searchQuery.trim()) {
-                          // When searching, toggle individual categories
                           const newExpanded = new Set(expandedCategories);
                           if (newExpanded.has(cat)) {
                             newExpanded.delete(cat);
@@ -461,7 +431,6 @@ export default function Home() {
                           }
                           setExpandedCategories(newExpanded);
                         } else {
-                          // Normal behavior when not searching
                           setOpenCategory(isOpen ? null : cat);
                         }
                       }}
@@ -482,10 +451,11 @@ export default function Home() {
                         {items.map((item, itemIndex) => (
                           <div
                             key={item.id}
-                            className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 transform md:transition-all md:duration-300 md:hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] md:hover:-translate-y-1 group"
+                            onClick={() => setSelectedItem(item)} // OPEN MODAL
+                            className="bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 transform md:transition-all md:duration-300 md:hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] md:hover:-translate-y-1 group cursor-pointer hover:bg-pink-50/30"
                             style={{ animationDelay: `${itemIndex * 50}ms` }}
                           >
-                            <div className="flex items-start gap-4 flex-1">
+                            <div className="flex items-start gap-4 flex-1 pointer-events-none"> {/* content not clickable separately */}
                               {item.imageUrl && (
                                 <div className="relative overflow-hidden rounded-xl border-2 border-pink-200 group-hover:border-pink-400 transition-colors duration-300">
                                   <img
@@ -512,20 +482,20 @@ export default function Home() {
                             {getItemQty(item.id) === 0 ? (
                               <button
                                 onClick={(e) => {
+                                  e.stopPropagation(); // PREVENT MODAL OPEN
                                   addToCart(item);
-                                  // Add a visual feedback
                                   const btn = e.currentTarget;
                                   btn.classList.add('animate-bounce-slow');
                                   setTimeout(() => btn.classList.remove('animate-bounce-slow'), 500);
                                 }}
-                                className="bg-gray-900 text-white px-6 py-3 rounded-full font-bold hover:bg-rose-600 md:transition-all md:duration-300 active:scale-95 shadow-lg hover:shadow-rose-200 transform whitespace-nowrap flex-shrink-0 tracking-wide"
+                                className="bg-gray-900 text-white px-6 py-3 rounded-full font-bold hover:bg-rose-600 md:transition-all md:duration-300 active:scale-95 shadow-lg hover:shadow-rose-200 transform whitespace-nowrap flex-shrink-0 tracking-wide z-10"
                               >
                                 ADD
                               </button>
                             ) : (
-                              <div className="flex items-center gap-3 bg-white border-2 border-rose-100 rounded-full px-2 py-1 shadow-sm md:transition-all md:duration-300">
+                              <div className="flex items-center gap-3 bg-white border-2 border-rose-100 rounded-full px-2 py-1 shadow-sm md:transition-all md:duration-300 z-10" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  onClick={() => removeFromCartById(item.id)}
+                                  onClick={(e) => { e.stopPropagation(); removeFromCartById(item.id); }}
                                   className="w-8 h-8 flex items-center justify-center rounded-full bg-rose-50 text-rose-600 font-bold hover:bg-rose-100 active:scale-90 md:transition-all md:duration-200"
                                 >
                                   −
@@ -534,7 +504,7 @@ export default function Home() {
                                   {getItemQty(item.id)}
                                 </span>
                                 <button
-                                  onClick={() => addToCart(item)}
+                                  onClick={(e) => { e.stopPropagation(); addToCart(item); }}
                                   className="w-8 h-8 flex items-center justify-center rounded-full bg-rose-600 text-white font-bold hover:bg-rose-700 active:scale-90 md:transition-all md:duration-200 shadow-md hover:shadow-rose-200"
                                 >
                                   +
@@ -552,7 +522,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* CART SIDEBAR (Desktop) / FLOATING BUTTON (Mobile) */}
+        {/* CART SIDEBAR / FLOATING BUTTON */}
         <div className="w-full md:w-96 glass-panel p-8 rounded-[2.5rem] shadow-[0_20px_60px_rgb(0,0,0,0.06)] h-fit sticky top-24 transform md:transition-all md:duration-300 hover:shadow-[0_30px_80px_rgb(0,0,0,0.1)] md:animate-slideIn border-0">
           <div className="flex items-center justify-between mb-4 pb-3 border-b-2 border-pink-200">
             <h2 className="text-3xl font-cinzel font-bold text-gray-900">
@@ -622,6 +592,79 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* ITEM DETAILS MODAL */}
+        {selectedItem && (
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn"
+            onClick={() => setSelectedItem(null)}
+          >
+            <div
+              className="bg-white/90 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-scaleIn relative border border-white/40"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedItem(null)}
+                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 text-gray-800 transition-colors backdrop-blur-sm"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              {/* Image Header */}
+              <div className="h-64 bg-gray-100 relative">
+                {selectedItem.imageUrl ? (
+                  <img
+                    src={selectedItem.imageUrl}
+                    alt={selectedItem.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-100 to-rose-50 text-6xl">
+                    🍽️
+                  </div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white/90 to-transparent"></div>
+              </div>
+
+              {/* Content */}
+              <div className="p-8 pt-2 -mt-6 relative">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-cinzel font-bold text-3xl text-gray-900 leading-tight">
+                    {selectedItem.name}
+                  </h3>
+                  <span className="text-2xl font-bold text-rose-600 font-inter bg-rose-50 px-3 py-1 rounded-lg">
+                    ₹{selectedItem.price}
+                  </span>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider ${selectedItem.vegType === 'Non-Veg' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-green-100 text-green-700 border border-green-200'
+                    }`}>
+                    {selectedItem.vegType || 'Veg'}
+                  </span>
+                  <span className="text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
+                    {selectedItem.category}
+                  </span>
+                </div>
+
+                <p className="text-gray-600 leading-relaxed mb-8 font-inter text-lg">
+                  {selectedItem.description || "No description available for this delicious item."}
+                </p>
+
+                <button
+                  onClick={() => {
+                    addToCart(selectedItem);
+                    setSelectedItem(null);
+                  }}
+                  className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-xl hover:bg-rose-600 active:scale-95 transition-all shadow-xl hover:shadow-rose-300 flex items-center justify-center gap-2"
+                >
+                  <span>Add to Tray</span>
+                  <span className="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-sm">+</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order History Modal */}
         {showOrderHistory && (
