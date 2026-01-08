@@ -85,12 +85,13 @@ export default function OrdersPage() {
         ) : (
           orders.map((order) => (
             <div key={order.id} className={`p-6 rounded-lg shadow-md border-l-8 bg-white ${order.status === 'served' ? 'border-green-500 opacity-60' :
-                order.status === 'cancelled' ? 'border-gray-400 opacity-60' :
-                  'border-red-500'
+              order.status === 'cancelled' ? 'border-gray-400 opacity-60' :
+                'border-red-500'
               }`}>
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-lg font-bold">Order #{order.orderNumber ?? order.id.slice(0, 5)}</h3>
+                  <p className="text-sm text-gray-500 font-semibold">{order.customerName || "Guest"}</p>
                   <p className="text-sm text-gray-400">{order.timestamp?.toDate().toLocaleString()}</p>
 
                   <ul className="mt-3 list-disc list-inside">
@@ -106,13 +107,20 @@ export default function OrdersPage() {
                     ))}
                   </ul>
 
-                  <p className="mt-4 font-bold text-xl text-red-600">Total: ₹{order.totalPrice}</p>
+                  <div className="mt-4 flex flex-col gap-1">
+                    <p className="font-bold text-xl text-red-600">Total: ₹{order.totalPrice}</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Payment: <span className={`uppercase font-bold ${order.paymentStatus === 'cash' ? 'text-green-600' : 'text-blue-600'}`}>
+                        {order.paymentStatus === 'awaiting_verification' ? 'UPI (Verifying)' : order.paymentStatus}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex flex-col items-end">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold mb-4 ${order.status === 'served' ? 'bg-green-100 text-green-700' :
-                      order.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
-                        'bg-red-100 text-red-700'
+                    order.status === 'cancelled' ? 'bg-gray-100 text-gray-700' :
+                      'bg-red-100 text-red-700'
                     }`}>
                     {order.status.toUpperCase()}
                   </span>

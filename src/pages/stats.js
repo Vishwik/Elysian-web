@@ -42,7 +42,7 @@ export default function StatsPage() {
   // Fetch all orders in real-time
   useEffect(() => {
     if (!user) return;
-    
+
     const q = query(collection(db, "orders"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const ordersArr = [];
@@ -84,7 +84,7 @@ export default function StatsPage() {
     const totalProfit = filteredOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
     const totalOrdersServed = filteredOrders.length;
     const averageOrderValue = totalOrdersServed > 0 ? totalProfit / totalOrdersServed : 0;
-    
+
     // Today's stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -116,7 +116,7 @@ export default function StatsPage() {
     const monthRevenue = monthOrders.reduce((sum, order) => sum + (Number(order.totalPrice) || 0), 0);
 
     // Highest order value
-    const highestOrder = filteredOrders.length > 0 
+    const highestOrder = filteredOrders.length > 0
       ? Math.max(...filteredOrders.map(o => Number(o.totalPrice) || 0))
       : 0;
 
@@ -179,8 +179,8 @@ export default function StatsPage() {
         categoryMap[cat].count += 1;
       });
     });
-    return Object.entries(categoryMap).map(([name, data]) => ({ 
-      name, 
+    return Object.entries(categoryMap).map(([name, data]) => ({
+      name,
       value: data.revenue,
       count: data.count
     }));
@@ -191,7 +191,7 @@ export default function StatsPage() {
     const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, revenue: 0, orders: 0 }));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     filteredOrders
       .filter(order => {
         if (!order.timestamp) return false;
@@ -204,7 +204,7 @@ export default function StatsPage() {
         hours[hour].revenue += Number(order.totalPrice) || 0;
         hours[hour].orders += 1;
       });
-    
+
     return hours.map(h => ({
       hour: `${h.hour}:00`,
       revenue: h.revenue,
@@ -239,7 +239,7 @@ export default function StatsPage() {
       acc[day] = { day, revenue: 0, orders: 0 };
       return acc;
     }, {});
-    
+
     filteredOrders.forEach(order => {
       if (!order.timestamp) return;
       const orderDate = order.timestamp.toDate ? order.timestamp.toDate() : new Date(order.timestamp);
@@ -247,14 +247,14 @@ export default function StatsPage() {
       dayMap[dayName].revenue += Number(order.totalPrice) || 0;
       dayMap[dayName].orders += 1;
     });
-    
+
     return Object.values(dayMap);
   }, [filteredOrders]);
 
   // Peak hours analysis (all time)
   const peakHoursData = useMemo(() => {
     const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, revenue: 0, orders: 0 }));
-    
+
     filteredOrders.forEach(order => {
       if (!order.timestamp) return;
       const orderDate = order.timestamp.toDate ? order.timestamp.toDate() : new Date(order.timestamp);
@@ -262,7 +262,7 @@ export default function StatsPage() {
       hours[hour].revenue += Number(order.totalPrice) || 0;
       hours[hour].orders += 1;
     });
-    
+
     return hours.map(h => ({
       hour: `${h.hour}:00`,
       revenue: h.revenue,
@@ -280,6 +280,34 @@ export default function StatsPage() {
     return Object.entries(statusMap).map(([name, value]) => ({ name, value }));
   }, [orders]);
 
+  // Payment Method Breakdown
+  const paymentMethodData = useMemo(() => {
+    const paymentMap = { Cash: 0, UPI: 0 };
+    orders.forEach(order => {
+      // Map 'awaiting_verification' to 'UPI', 'cash' to 'Cash'
+      // Handle other potential statuses if any, default to checking content
+      let mode = 'Other';
+      const status = (order.paymentStatus || '').toLowerCase();
+
+      if (status.includes('cash')) {
+        mode = 'Cash';
+      } else if (status.includes('upi') || status === 'awaiting_verification') {
+        mode = 'UPI';
+      } else {
+        // Fallback or count matches
+        if (status === 'paid') mode = 'UPI'; // Assumption based on typical flow
+        else mode = 'UPI'; // Defaulting to UPI if unknown logic implies digital? Or maybe 'Other'
+      }
+
+      // Stronger check:
+      if (status === 'cash') mode = 'Cash';
+      else mode = 'UPI'; // Treat everything else as UPI/Digital for now
+
+      paymentMap[mode] = (paymentMap[mode] || 0) + 1;
+    });
+    return Object.entries(paymentMap).map(([name, value]) => ({ name, value }));
+  }, [orders]);
+
   // Average items per order
   const avgItemsPerOrder = useMemo(() => {
     if (filteredOrders.length === 0) return 0;
@@ -291,7 +319,7 @@ export default function StatsPage() {
   const growthMetrics = useMemo(() => {
     const now = new Date();
     const currentPeriod = filteredOrders;
-    
+
     // Previous period based on timePeriod
     let prevStart, prevEnd, currentStart;
     if (timePeriod === 'today') {
@@ -325,8 +353,8 @@ export default function StatsPage() {
     const currentRevenue = currentPeriod.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
     const prevRevenue = prevPeriod.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
     const revenueGrowth = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue * 100).toFixed(1) : 0;
-    
-    const ordersGrowth = prevPeriod.length > 0 
+
+    const ordersGrowth = prevPeriod.length > 0
       ? ((currentPeriod.length - prevPeriod.length) / prevPeriod.length * 100).toFixed(1)
       : 0;
 
@@ -341,7 +369,7 @@ export default function StatsPage() {
       'Afternoon (12PM-6PM)': { revenue: 0, orders: 0 },
       'Evening (6PM-12AM)': { revenue: 0, orders: 0 }
     };
-    
+
     filteredOrders.forEach(order => {
       if (!order.timestamp) return;
       const orderDate = order.timestamp.toDate ? order.timestamp.toDate() : new Date(order.timestamp);
@@ -351,11 +379,11 @@ export default function StatsPage() {
       else if (hour >= 6 && hour < 12) period = 'Morning (6AM-12PM)';
       else if (hour >= 12 && hour < 18) period = 'Afternoon (12PM-6PM)';
       else period = 'Evening (6PM-12AM)';
-      
+
       periods[period].revenue += Number(order.totalPrice) || 0;
       periods[period].orders += 1;
     });
-    
+
     return Object.entries(periods).map(([name, data]) => ({
       name,
       revenue: data.revenue,
@@ -384,8 +412,8 @@ export default function StatsPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">📊 Order Statistics</h1>
-          <Link 
-            href="/admin" 
+          <Link
+            href="/admin"
             className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition"
           >
             ← Back to Admin
@@ -429,33 +457,29 @@ export default function StatsPage() {
         <div className="mb-6 flex gap-2">
           <button
             onClick={() => setTimePeriod('all')}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              timePeriod === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
-            }`}
+            className={`px-4 py-2 rounded font-semibold transition ${timePeriod === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
+              }`}
           >
             All Time
           </button>
           <button
             onClick={() => setTimePeriod('month')}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              timePeriod === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
-            }`}
+            className={`px-4 py-2 rounded font-semibold transition ${timePeriod === 'month' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
+              }`}
           >
             This Month
           </button>
           <button
             onClick={() => setTimePeriod('week')}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              timePeriod === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
-            }`}
+            className={`px-4 py-2 rounded font-semibold transition ${timePeriod === 'week' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
+              }`}
           >
             This Week
           </button>
           <button
             onClick={() => setTimePeriod('today')}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              timePeriod === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
-            }`}
+            className={`px-4 py-2 rounded font-semibold transition ${timePeriod === 'today' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'
+              }`}
           >
             Today
           </button>
@@ -664,12 +688,41 @@ export default function StatsPage() {
                   {orderStatusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={
                       entry.name === 'served' ? '#10b981' :
-                      entry.name === 'pending' ? '#f59e0b' :
-                      '#ef4444'
+                        entry.name === 'pending' ? '#f59e0b' :
+                          '#ef4444'
                     } />
                   ))}
                 </Pie>
                 <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Payment Method Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-lg border">
+            <h3 className="text-xl font-bold mb-4">Payment Method Breakdown</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={paymentMethodData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {paymentMethodData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={
+                      entry.name === 'Cash' ? '#10b981' : '#3b82f6'
+                    } />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>

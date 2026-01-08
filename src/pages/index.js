@@ -18,6 +18,9 @@ export default function Home() {
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [trackedOrders, setTrackedOrders] = useState([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState(null);
+  const [userName, setUserName] = useState("");
 
   // Auto-expand all categories with search results when searching
   const [expandedCategories, setExpandedCategories] = useState(new Set(["Combos"]));
@@ -239,6 +242,7 @@ export default function Home() {
         totalPrice: total,
         status: "pending",
         paymentStatus: mode === "UPI" ? "awaiting_verification" : "cash",
+        customerName: userName,
         timestamp: serverTimestamp(),
       });
 
@@ -261,6 +265,8 @@ export default function Home() {
 
       alert("🍓 Order Placed! You can track it in 'My Orders'.");
       setCart([]);
+      setUserName("");
+      setSelectedPaymentMode(null);
     } catch (e) {
       console.error("Firebase Error:", e);
       alert("Permission Denied or Connection Error. Check console.");
@@ -697,18 +703,62 @@ export default function Home() {
               </div>
               <div className="p-6 space-y-4">
                 <button
-                  onClick={() => { setShowPaymentModal(false); placeOrderWithMode("UPI"); }}
+                  onClick={() => { setShowPaymentModal(false); setSelectedPaymentMode("UPI"); setShowNameModal(true); }}
                   disabled={cart.length === 0 || !acceptingOrders}
                   className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-rose-600 to-pink-600 text-white hover:from-rose-700 hover:to-pink-700'}`}
                 >
                   UPI
                 </button>
                 <button
-                  onClick={() => { setShowPaymentModal(false); placeOrderWithMode("Cash"); }}
+                  onClick={() => { setShowPaymentModal(false); setSelectedPaymentMode("Cash"); setShowNameModal(true); }}
                   disabled={cart.length === 0 || !acceptingOrders}
                   className={`w-full py-4 rounded-2xl font-bold text-lg ${cart.length === 0 || !acceptingOrders ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-rose-600'}`}
                 >
                   Cash
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showNameModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-rose-50/50">
+                <h3 className="font-cinzel font-bold text-2xl text-gray-900">Enter Your Name</h3>
+                <button
+                  onClick={() => setShowNameModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-gray-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shadow-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-gray-600 text-sm">Please tell us who this order is for.</p>
+                <input
+                  type="text"
+                  placeholder="Your Name"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-400 focus:border-transparent outline-none transition-all font-inter"
+                  autoFocus
+                />
+                <button
+                  onClick={() => {
+                    if (!userName.trim()) {
+                      alert("Please enter your name");
+                      return;
+                    }
+                    setShowNameModal(false);
+                    placeOrderWithMode(selectedPaymentMode);
+                  }}
+                  disabled={!userName.trim()}
+                  className={`w-full py-4 rounded-2xl font-bold text-lg ${!userName.trim()
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-rose-600 to-pink-600 text-white hover:from-rose-700 hover:to-pink-700 shadow-lg hover:shadow-rose-200'
+                    }`}
+                >
+                  Confirm Order
                 </button>
               </div>
             </div>
