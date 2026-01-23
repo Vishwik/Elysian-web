@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { db, auth } from '../lib/firebaseConfig';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, serverTimestamp, doc, getDoc, query, where, documentId, setDoc, updateDoc } from 'firebase/firestore';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ShoppingCart, Clock, X, Info, LogOut } from 'lucide-react';
 
@@ -51,12 +51,35 @@ export default function Home() {
 
   // Auth State Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         setUserName(currentUser.displayName);
         setShowSignInHint(false); // Hide hint if logged in
-        // Load orders for this user
+
+        // Sync local orders to this user
+        if (typeof window !== "undefined") {
+          const localIds = JSON.parse(localStorage.getItem("elysian_my_orders") || "[]");
+          if (localIds.length > 0) {
+            // Process sync in background
+            localIds.forEach(async (orderId) => {
+              try {
+                const orderRef = doc(db, "orders", orderId);
+                const orderSnap = await getDoc(orderRef);
+                if (orderSnap.exists()) {
+                  const data = orderSnap.data();
+                  // Only claim the order if it has no owner
+                  if (!data.userId) {
+                    await updateDoc(orderRef, { userId: currentUser.uid });
+                    console.log(`Synced order ${orderId} to user ${currentUser.uid}`);
+                  }
+                }
+              } catch (err) {
+                console.error("Error syncing order:", orderId, err);
+              }
+            });
+          }
+        }
       }
     });
     return () => unsubscribe();
@@ -108,13 +131,17 @@ export default function Home() {
   // Load My Orders from LocalStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("elysian_my_orders");
-      if (saved) {
-        setMyOrderIds(JSON.parse(saved));
-      }
-      const savedName = localStorage.getItem("elysian_user_name");
-      if (savedName) {
-        setUserName(savedName);
+      try {
+        const saved = localStorage.getItem("elysian_my_orders");
+        if (saved) {
+          setMyOrderIds(JSON.parse(saved));
+        }
+        const savedName = localStorage.getItem("elysian_user_name");
+        if (savedName) {
+          setUserName(savedName);
+        }
+      } catch (e) {
+        console.error("Error loading local orders:", e);
       }
     }
   }, []);
@@ -135,6 +162,8 @@ export default function Home() {
         const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
         setTrackedOrders(orders);
+      }, (error) => {
+        console.error("Error fetching user orders:", error);
       });
 
     } else if (myOrderIds.length > 0) {
@@ -149,6 +178,10 @@ export default function Home() {
         const orders = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         orders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
         setTrackedOrders(orders);
+      }, (error) => {
+        console.error("Error fetching guest orders:", error);
+        // If permission denied (e.g. order claimed by user), we might want to handle it?
+        // For now, just logging.
       });
     } else {
       setTrackedOrders([]);
