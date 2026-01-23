@@ -50,6 +50,41 @@ export default function Home() {
   }, [user]);
 
   // Auth State Listener
+  // Sync Guest Orders to User Account
+  const syncGuestOrders = async (currentUser) => {
+    if (typeof window === "undefined" || !currentUser) return;
+
+    const localIds = JSON.parse(localStorage.getItem("elysian_my_orders") || "[]");
+    if (localIds.length === 0) return;
+
+    let syncedCount = 0;
+    const promises = localIds.map(async (orderId) => {
+      try {
+        const orderRef = doc(db, "orders", orderId);
+        const orderSnap = await getDoc(orderRef);
+
+        if (orderSnap.exists()) {
+          const data = orderSnap.data();
+          // Only claim if no owner
+          if (!data.userId) {
+            await updateDoc(orderRef, { userId: currentUser.uid });
+            syncedCount++;
+            console.log(`Synced order ${orderId} to user ${currentUser.uid}`);
+          }
+        }
+      } catch (err) {
+        console.error("Error syncing order:", orderId, err);
+      }
+    });
+
+    await Promise.all(promises);
+
+    if (syncedCount > 0) {
+      alert(`Successfully synced ${syncedCount} past order(s) to your account! 🍓`);
+    }
+  };
+
+  // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -57,29 +92,8 @@ export default function Home() {
         setUserName(currentUser.displayName);
         setShowSignInHint(false); // Hide hint if logged in
 
-        // Sync local orders to this user
-        if (typeof window !== "undefined") {
-          const localIds = JSON.parse(localStorage.getItem("elysian_my_orders") || "[]");
-          if (localIds.length > 0) {
-            // Process sync in background
-            localIds.forEach(async (orderId) => {
-              try {
-                const orderRef = doc(db, "orders", orderId);
-                const orderSnap = await getDoc(orderRef);
-                if (orderSnap.exists()) {
-                  const data = orderSnap.data();
-                  // Only claim the order if it has no owner
-                  if (!data.userId) {
-                    await updateDoc(orderRef, { userId: currentUser.uid });
-                    console.log(`Synced order ${orderId} to user ${currentUser.uid}`);
-                  }
-                }
-              } catch (err) {
-                console.error("Error syncing order:", orderId, err);
-              }
-            });
-          }
-        }
+        // Trigger sync
+        await syncGuestOrders(currentUser);
       }
     });
     return () => unsubscribe();
