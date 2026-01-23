@@ -968,16 +968,29 @@ export default function Home() {
                       </div>
 
                       <div className="space-y-1 mb-3">
-                        {order.items.slice(0, 3).map((item, i) => (
-                          <p key={i} className="text-sm text-gray-600 truncate">
-                            {item.quantity ? `${item.quantity}x ` : ''}{item.name}
-                          </p>
-                        ))}
-                        {order.items.length > 3 && (
-                          <p className="text-xs text-rose-500 font-medium italic">
-                            + {order.items.length - 3} more items...
-                          </p>
-                        )}
+                        {(() => {
+                          const groupedItems = Object.values(order.items.reduce((acc, item) => {
+                            const key = item.id || item.name;
+                            if (!acc[key]) acc[key] = { ...item, quantity: 0 };
+                            acc[key].quantity += 1;
+                            return acc;
+                          }, {}));
+
+                          return (
+                            <>
+                              {groupedItems.slice(0, 3).map((item, i) => (
+                                <p key={i} className="text-sm text-gray-600 truncate">
+                                  <span className="font-bold text-gray-800">{item.quantity}x</span> {item.name}
+                                </p>
+                              ))}
+                              {groupedItems.length > 3 && (
+                                <p className="text-xs text-rose-500 font-medium italic">
+                                  + {groupedItems.length - 3} more items...
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {order.status === 'pending' && (
